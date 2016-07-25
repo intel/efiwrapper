@@ -1,0 +1,18 @@
+create libkernelflinger.efi.a
+addmod kernelflinger.o
+addmod oemcert.o
+addmod ux.o
+addmod unittest.o
+addlib libefi.a
+addlib libfastboot-userdebug.a
+addlib libadb-userdebug.a
+addlib libefitcp-userdebug.a
+addlib libefiusb-userdebug.a
+addlib libgnuefi.a
+addlib libkernelflinger.a
+addlib libopensslsupport.a
+addlib libtransport-userdebug.a
+addlib libuefi_crypto_static.a
+addlib libuefi_ssl_static.a
+save
+end
