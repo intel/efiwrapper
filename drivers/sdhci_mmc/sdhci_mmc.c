@@ -165,7 +165,7 @@ static EFI_STATUS sdhci_mmc_init(EFI_SYSTEM_TABLE *st)
 	return ret;
 }
 
-static EFI_STATUS sdhci_mmc_free(EFI_SYSTEM_TABLE *st)
+static EFI_STATUS sdhci_mmc_exit(EFI_SYSTEM_TABLE *st)
 {
 	EFI_STATUS ret;
 
@@ -183,5 +183,5 @@ ewdrv_t sdhci_mmc_drv = {
 	.name = "sdhci_mmc",
 	.description = "SDHCI PCI eMMC driver",
 	.init = sdhci_mmc_init,
-	.free = sdhci_mmc_free
+	.exit = sdhci_mmc_exit
 };

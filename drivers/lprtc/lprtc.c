@@ -71,7 +71,7 @@ static EFI_STATUS lprtc_init(EFI_SYSTEM_TABLE *st)
 	return EFI_SUCCESS;
 }
 
-static EFI_STATUS lprtc_free(EFI_SYSTEM_TABLE *st)
+static EFI_STATUS lprtc_exit(EFI_SYSTEM_TABLE *st)
 {
 	if (!st)
 		return EFI_INVALID_PARAMETER;
@@ -86,5 +86,5 @@ ewdrv_t lprtc_drv = {
 	.description = "Provide the GetTime runtime service support based \
 on the libpayload rtc_read_clock() function.",
 	.init = lprtc_init,
-	.free = lprtc_free
+	.exit = lprtc_exit
 };

@@ -55,7 +55,7 @@ EFI_STATUS ewdrv_init(EFI_SYSTEM_TABLE *st)
 	return ret;
 }
 
-EFI_STATUS ewdrv_free(EFI_SYSTEM_TABLE *st)
+EFI_STATUS ewdrv_exit(EFI_SYSTEM_TABLE *st)
 {
 	EFI_STATUS ret;
 	size_t i;
@@ -64,9 +64,9 @@ EFI_STATUS ewdrv_free(EFI_SYSTEM_TABLE *st)
 		return EFI_UNSUPPORTED;
 
 	for (i = 0; ew_drivers[i]; i++) {
-		if (!ew_drivers[i]->free)
+		if (!ew_drivers[i]->exit)
 			continue;
-		ret = ew_drivers[i]->free(st);
+		ret = ew_drivers[i]->exit(st);
 		if (EFI_ERROR(ret))
 			return ret;
 	}

@@ -87,7 +87,7 @@ static EFI_STATUS cf9_init(EFI_SYSTEM_TABLE *st)
 	return EFI_SUCCESS;
 }
 
-static EFI_STATUS cf9_free(EFI_SYSTEM_TABLE *st)
+static EFI_STATUS cf9_exit(EFI_SYSTEM_TABLE *st)
 {
 	if (!st)
 		return EFI_INVALID_PARAMETER;
@@ -101,5 +101,5 @@ ewdrv_t cf9_drv = {
 	.name = "cf9",
 	.description = "Provide reset support based on CF9 IO port",
 	.init = cf9_init,
-	.free = cf9_free
+	.exit = cf9_exit
 };
