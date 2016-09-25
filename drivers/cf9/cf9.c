@@ -69,7 +69,7 @@ cf9_reset_system(EFI_RESET_TYPE ResetType,
 	udelay(50);
 
 	outb(cf9 | code, port);
-	udelay(50);
+	udelay(500);
 
 	return EFI_DEVICE_ERROR;
 }
