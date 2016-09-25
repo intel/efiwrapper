@@ -39,7 +39,7 @@ typedef struct ewdrv {
 	const char *name;	/* Mandatory */
 	const char *description;
 	EFI_STATUS (*init)(EFI_SYSTEM_TABLE *st); /* Mandatory */
-	EFI_STATUS (*free)(EFI_SYSTEM_TABLE *st);
+	EFI_STATUS (*exit)(EFI_SYSTEM_TABLE *st);
 	void *priv;
 } ewdrv_t;
 
@@ -47,6 +47,6 @@ typedef struct ewdrv {
 extern ewdrv_t **ew_drivers;
 
 EFI_STATUS ewdrv_init(EFI_SYSTEM_TABLE *st);
-EFI_STATUS ewdrv_free(EFI_SYSTEM_TABLE *st);
+EFI_STATUS ewdrv_exit(EFI_SYSTEM_TABLE *st);
 
 #endif	/* _EWDRV_H_ */

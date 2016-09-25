@@ -124,7 +124,7 @@ static EFI_STATUS acpi_init(EFI_SYSTEM_TABLE *st)
 	return EFI_SUCCESS;
 }
 
-static EFI_STATUS acpi_free(EFI_SYSTEM_TABLE *st)
+static EFI_STATUS acpi_exit(EFI_SYSTEM_TABLE *st)
 {
 	EFI_STATUS ret;
 	struct RSDP_TABLE *rsdp;
@@ -144,5 +144,5 @@ ewdrv_t acpi_drv = {
 	.name = "acpi",
 	.description = "Look-up for ACPI tables and provide them via the System Table",
 	.init = acpi_init,
-	.free = acpi_free
+	.exit = acpi_exit
 };

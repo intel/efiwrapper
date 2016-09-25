@@ -60,7 +60,7 @@ int main(int argc, char **argv)
 	if (EFI_ERROR(ret))
 		ewerr("The EFI program exited with error code: 0x%x", ret);
 
-	ret = ewdrv_free(st);
+	ret = ewdrv_exit(st);
 	if (ret)
 		ewerr("drivers release failed");
 

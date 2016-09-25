@@ -154,7 +154,7 @@ static EFI_STATUS lpmemmap_init(EFI_SYSTEM_TABLE *st)
 	return EFI_SUCCESS;
 }
 
-static EFI_STATUS lpmemmap_free(EFI_SYSTEM_TABLE *st)
+static EFI_STATUS lpmemmap_exit(EFI_SYSTEM_TABLE *st)
 {
 	if (!st)
 		return EFI_INVALID_PARAMETER;
@@ -172,5 +172,5 @@ ewdrv_t lpmemmap_drv = {
 	.name = "lpmemmap",
 	.description = "Convert Libpayload sysinfo memory map to EFI memory map",
 	.init = lpmemmap_init,
-	.free = lpmemmap_free
+	.exit = lpmemmap_exit
 };

@@ -994,7 +994,7 @@ static EFI_STATUS dw3_init(EFI_SYSTEM_TABLE *st)
 				 EFI_NATIVE_INTERFACE, &usb_struct);
 }
 
-static EFI_STATUS dw3_free(EFI_SYSTEM_TABLE *st)
+static EFI_STATUS dw3_exit(EFI_SYSTEM_TABLE *st)
 {
 	EFI_STATUS ret;
 
@@ -1017,5 +1017,5 @@ ewdrv_t dw3_drv = {
 	.name = "dw3",
 	.description = "XDCI driver",
 	.init = dw3_init,
-	.free = dw3_free
+	.exit = dw3_exit
 };
