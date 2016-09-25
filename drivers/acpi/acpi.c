@@ -47,7 +47,7 @@ struct RSDP_TABLE {
 	uint64_t xsdt_address;		/* 64-bit XSDT Pointer */
 	uint8_t extended_checksum;	/* rsdp Checksum (full) */
 	char reserved[3];		/* Reserved */
-};
+} __attribute__((packed));
 
 static uint8_t checksum(uint8_t *buf, size_t size)
 {
