@@ -37,7 +37,7 @@
 EFI_STATUS ewdrv_init(EFI_SYSTEM_TABLE *st)
 {
 	EFI_STATUS ret = EFI_SUCCESS;
-	size_t i;
+	size_t i, j;
 
 	if (!ew_drivers)
 		return EFI_UNSUPPORTED;
@@ -50,8 +50,15 @@ EFI_STATUS ewdrv_init(EFI_SYSTEM_TABLE *st)
 		      ew_drivers[i]->name);
 	}
 
-	if (EFI_ERROR(ret))
+	if (EFI_ERROR(ret)) {
 		ewerr("Failed to initialize '%s' driver", ew_drivers[i]->name);
+		for (j = 0; j < i; j++) {
+			if (!ew_drivers[j]->exit)
+				continue;
+			ew_drivers[j]->exit(st);
+		}
+	}
+
 	return ret;
 }
 
