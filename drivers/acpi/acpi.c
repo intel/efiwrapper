@@ -60,11 +60,14 @@ static uint8_t checksum(uint8_t *buf, size_t size)
 	return !sum ? 0 : 0x100 - sum;
 }
 
-static struct RSDP_TABLE *lookup_for_rdsp(void)
+static struct RSDP_TABLE *lookup_for_rdsp(char *from)
 {
 	char *p;
 
-	for (p = (char *)0xE0000; p < (char *)0x100000; p += 16)
+	if (!from)
+		from = (char *)0xE0000;
+
+	for (p = from; p < (char *)0x100000; p += 16)
 		if (!memcmp(p, RSDP_MAGIC, sizeof(RSDP_MAGIC)))
 			return (struct RSDP_TABLE *)p;
 
@@ -77,24 +80,23 @@ static EFI_STATUS get_rsdp(struct RSDP_TABLE **rsdp, EFI_GUID *guid)
 	EFI_GUID acpi2_guid = ACPI_20_TABLE_GUID;
 	struct RSDP_TABLE *table;
 
-	table = lookup_for_rdsp();
-	if (!table)
-		return EFI_NOT_FOUND;
+	for (table = NULL;; table += 16) {
+		table = lookup_for_rdsp((char *)table);
+		if (!table)
+			return EFI_NOT_FOUND;
 
-	switch (table->revision) {
-	case 0:
-		if (checksum((uint8_t *)table,
-			     offsetof(struct RSDP_TABLE, length)))
-			return EFI_COMPROMISED_DATA;
-		memcpy(guid, &acpi_guid, sizeof(*guid));
-		break;
-	case 2:
-		if (checksum((uint8_t *)table, sizeof(*table)))
-			return EFI_COMPROMISED_DATA;
-		memcpy(guid, &acpi2_guid, sizeof(*guid));
-		break;
-	default:
-		return EFI_UNSUPPORTED;
+		if (table->revision == 0) {
+			if (checksum((uint8_t *)table,
+				     offsetof(struct RSDP_TABLE, length)))
+				continue;
+			memcpy(guid, &acpi_guid, sizeof(*guid));
+			break;
+		} else if (table->revision == 2) {
+			if (checksum((uint8_t *)table, sizeof(*table)))
+				continue;
+			memcpy(guid, &acpi2_guid, sizeof(*guid));
+			break;
+		}
 	}
 
 	*rsdp = table;
