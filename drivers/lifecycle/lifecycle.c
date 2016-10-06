@@ -45,7 +45,7 @@ typedef union hfs1 {
 		u32 manuf_mode: 1;	/* Manufacturing mode */
 		u32 part_tbl_status: 1;	/* Indicates status of flash
 					 * partition table */
-		u32 reserved: 25; 	/* Reset for further use */
+		u32 reserved: 25; 	/* Reserved for further use */
 		u32 d0i3_support: 1;	/* Indicates D0i3 support */
 	} field;
 	u32 data;
