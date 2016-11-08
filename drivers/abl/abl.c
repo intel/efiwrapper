@@ -34,6 +34,7 @@
 #include <libpayload.h>
 #include <smbios.h>
 #include <ewarg.h>
+#include <ewvar.h>
 #include <libsmbios.h>
 
 #include "abl/abl.h"
@@ -123,13 +124,31 @@ static EFI_STATUS set_smbios_fields(void)
 	return EFI_SUCCESS;
 }
 
+extern ewvar_storage_t reboot_target_storage;
+
 static EFI_STATUS abl_init(__attribute__((__unused__)) EFI_SYSTEM_TABLE *st)
 {
+	if (!st)
+		return EFI_INVALID_PARAMETER;
+
+	ewvar_register_storage(&reboot_target_storage);
+
 	return set_smbios_fields();
+}
+
+static EFI_STATUS abl_exit(EFI_SYSTEM_TABLE *st)
+{
+	if (!st)
+		return EFI_INVALID_PARAMETER;
+
+	ewvar_unregister_storage();
+
+	return EFI_SUCCESS;
 }
 
 ewdrv_t abl_drv = {
 	.name = "abl",
 	.description = "Automotive BootLoader support",
-	.init = abl_init
+	.init = abl_init,
+	.exit = abl_exit
 };
