@@ -1358,11 +1358,11 @@ dwc_xdci_core_init (
 	UINT32                          max_delay_iter = DWC_XDCI_MAX_DELAY_ITERATIONS;
 	UINT8                           i;
 
-	local_core_handle = (XDCI_CORE_HANDLE *)calloc (1, sizeof(XDCI_CORE_HANDLE));
-
 	if (core_handle == NULL) {
 	        return EFI_INVALID_PARAMETER;
 	}
+
+	local_core_handle = (XDCI_CORE_HANDLE *)calloc (1, sizeof(XDCI_CORE_HANDLE));
 
 	if (local_core_handle == NULL) {
 	        DEBUG ((DEBUG_INFO, "dwc_xdci_core_init: Failed to allocate handle for xDCI\n"));
