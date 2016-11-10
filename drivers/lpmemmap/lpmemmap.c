@@ -114,8 +114,10 @@ get_memory_map(UINTN *MemoryMapSize, EFI_MEMORY_DESCRIPTOR *MemoryMap,
 		return EFI_UNSUPPORTED;
 
 	size = efimemmap_nb * sizeof(*efimemmap);
-	if (size > *MemoryMapSize)
+	if (size > *MemoryMapSize) {
+		*MemoryMapSize = size;
 		return EFI_BUFFER_TOO_SMALL;
+	}
 
 	ret = uefi_call_wrapper(crc32, 3, efimemmap, size, &key);
 	if (EFI_ERROR(ret))
