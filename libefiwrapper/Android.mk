@@ -23,7 +23,8 @@ LOCAL_SRC_FILES := \
 	media.c \
 	conf_table.c \
 	smbios.c \
-	ewacpi.c
+	ewacpi.c \
+	ewarg.c
 LOCAL_CFLAGS := $(EFIWRAPPER_CFLAGS)
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/../include/libefiwrapper
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/../include/libefiwrapper

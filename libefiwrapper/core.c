@@ -32,6 +32,7 @@
 #include "bs.h"
 #include "conin.h"
 #include "conout.h"
+#include "ewarg.h"
 #include "ewlog.h"
 #include "ewvar.h"
 #include "lib.h"
@@ -141,6 +142,10 @@ EFI_STATUS efiwrapper_init(int argc, char **argv, EFI_SYSTEM_TABLE **st_p,
 	if (EFI_ERROR(ret))
 		goto err_load_options;
 
+	ret = ewarg_init(argc, argv);
+	if (EFI_ERROR(ret))
+		goto err_load_options;
+
 	*st_p = &st;
 
 	return EFI_SUCCESS;
@@ -182,6 +187,8 @@ EFI_STATUS efiwrapper_free(EFI_HANDLE img_handle)
 
 	ewvar_free_all();
 	free(img.LoadOptions);
+
+	ewarg_free();
 
 	return EFI_SUCCESS;
 }
