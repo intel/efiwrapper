@@ -29,9 +29,11 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <efi.h>
 #include <kconfig.h>
 #include <libpayload-config.h>
 #include <libpayload.h>
+#include <libsmbios.h>
 #include <smbios.h>
 #include <stdint.h>
 
@@ -84,7 +86,7 @@ static EFI_STATUS mmc_serial_init(__attribute__((__unused__)) EFI_SYSTEM_TABLE *
 	if (!serial)
 		return EFI_DEVICE_ERROR;
 
-	return smbios_set_serial_number(serial);
+	return smbios_set(1, offsetof(SMBIOS_TYPE1, SerialNumber), serial);
 }
 
 ewdrv_t mmc_serial_drv = {

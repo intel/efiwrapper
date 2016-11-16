@@ -41,29 +41,35 @@
 
 static EFI_GUID smbios_guid = SMBIOS_TABLE_GUID;
 
-#define DEFAULT_SERIAL_NUMBER "0123456789     "
-static const char serial_number[] = DEFAULT_SERIAL_NUMBER;
-static const char manufacturer[] = PRODUCT_MANUFACTURER;
-static const char product[] = PRODUCT_NAME;
-static const char version[] = EFIWRAPPER_VERSION;
+#define MAX_SMBIOS_FIELD 32
 
-static struct smbios_table {
+static struct {
 	struct type0 {
 		SMBIOS_TYPE0 type0;
-		char vendor[ARRAY_SIZE(manufacturer)];
-		char bios_version[ARRAY_SIZE(EFIWRAPPER_VERSION)];
+		char vendor[MAX_SMBIOS_FIELD];
+		char unused0[2];
+		char bios_version[MAX_SMBIOS_FIELD];
+		char unused1[2];
 		char end;
 	} __attribute__((__packed__)) type0;
 	struct type1 {
 		SMBIOS_TYPE1 type1;
-		char serial_number[ARRAY_SIZE(serial_number)];
-		char product_name[ARRAY_SIZE(product)];
+		char serial_number[MAX_SMBIOS_FIELD];
+		char unused0[2];
+		char product_name[MAX_SMBIOS_FIELD];
+		char unused1[2];
+		char version[MAX_SMBIOS_FIELD];
+		char unused2[2];
 		char end;
 	} __attribute__((__packed__)) type1;
 	struct type2 {
 		SMBIOS_TYPE2 type2;
-		char manufacturer[ARRAY_SIZE(manufacturer)];
-		char product_name[ARRAY_SIZE(product)];
+		char manufacturer[MAX_SMBIOS_FIELD];
+		char unused0[2];
+		char product_name[MAX_SMBIOS_FIELD];
+		char unused1[2];
+		char version[MAX_SMBIOS_FIELD];
+		char unused2[2];
 		char end;
 	} __attribute__((__packed__)) type2;
 } __attribute__((__packed__)) smbios_table = {
@@ -74,10 +80,10 @@ static struct smbios_table {
 				.Length = sizeof(SMBIOS_TYPE0)
 			},
 			.Vendor = 1,
-			.BiosVersion = 2
+			.BiosVersion = 3
 		},
-		.vendor = PRODUCT_MANUFACTURER,
-		.bios_version = EFIWRAPPER_VERSION
+		.unused0 = " ",
+		.unused1 = " "
 	},
 	{
 		.type1 = {
@@ -86,10 +92,12 @@ static struct smbios_table {
 				.Length = sizeof(SMBIOS_TYPE1)
 			},
 			.SerialNumber = 1,
-			.ProductName = 2
+			.ProductName = 3,
+			.Version = 5
 		},
-		.serial_number = DEFAULT_SERIAL_NUMBER,
-		.product_name = PRODUCT_NAME
+		.unused0 = " ",
+		.unused1 = " ",
+		.unused2 = " "
 	},
 	{
 		.type2 = {
@@ -98,10 +106,12 @@ static struct smbios_table {
 				.Length = sizeof(SMBIOS_TYPE2)
 			},
 			.Manufacturer = 1,
-			.ProductName = 2
+			.ProductName = 3,
+			.Version = 5
 		},
-		.manufacturer = PRODUCT_MANUFACTURER,
-		.product_name = PRODUCT_NAME
+		.unused0 = " ",
+		.unused1 = " ",
+		.unused2 = " "
 	}
 };
 
@@ -126,10 +136,41 @@ static UINT8 checksum(UINT8 *buf, size_t size)
 	return !sum ? 0 : 0x100 - sum;
 }
 
+static EFI_STATUS set_field(char *field, const char *value)
+{
+	size_t len;
+
+	len = strlen(value);
+	if (len == 0)
+		return EFI_INVALID_PARAMETER;
+	if (len > MAX_SMBIOS_FIELD - 1)
+		return EFI_BUFFER_TOO_SMALL;
+
+	memcpy(field, value, len + 1);
+	memset(field + len + 1, ' ', MAX_SMBIOS_FIELD - len - 1);
+
+	return EFI_SUCCESS;
+}
+
+static const struct {
+	char *field;
+	const char *value;
+} SMBIOS_DEFAULT[] = {
+	{ smbios_table.type0.vendor, 		PRODUCT_MANUFACTURER },
+	{ smbios_table.type0.bios_version, 	EFIWRAPPER_VERSION },
+	{ smbios_table.type1.serial_number,	SMBIOS_UNDEFINED },
+	{ smbios_table.type1.product_name,	PRODUCT_NAME },
+	{ smbios_table.type1.version,		SMBIOS_UNDEFINED },
+	{ smbios_table.type2.manufacturer,	PRODUCT_MANUFACTURER },
+	{ smbios_table.type2.product_name,	PRODUCT_NAME },
+	{ smbios_table.type2.version,		SMBIOS_UNDEFINED },
+};
+
 EFI_STATUS smbios_init(EFI_SYSTEM_TABLE *st)
 {
 	EFI_STATUS ret;
 	EFI_CONFIGURATION_TABLE *table;
+	size_t i;
 
 	if (!st)
 		return EFI_INVALID_PARAMETER;
@@ -137,6 +178,12 @@ EFI_STATUS smbios_init(EFI_SYSTEM_TABLE *st)
 	ret = conf_table_new(st, &smbios_guid, &table);
 	if (EFI_ERROR(ret))
 		return ret;
+
+	for (i = 0; i < ARRAY_SIZE(SMBIOS_DEFAULT); i++) {
+		ret = set_field(SMBIOS_DEFAULT[i].field, SMBIOS_DEFAULT[i].value);
+		if (EFI_ERROR(ret))
+			return ret;
+	}
 
 	table->VendorTable = &smbios;
 	smbios.EntryPointStructureChecksum = 0;
@@ -150,14 +197,49 @@ EFI_STATUS smbios_free(EFI_SYSTEM_TABLE *st)
 	return conf_table_free(st, &smbios_guid);
 }
 
-EFI_STATUS smbios_set_serial_number(char *serial)
+static char *get_table_field(SMBIOS_HEADER *hdr, UINT8 field)
 {
-	if (!serial)
-		return EFI_INVALID_PARAMETER;
+	UINT8 i;
+	char *str;
 
-	memcpy(smbios_table.type1.serial_number, serial,
-	       min(sizeof(smbios_table.type1.serial_number) - 1,
-		   strlen(serial)));
+	if (field == 0 || hdr >= (SMBIOS_HEADER *)(&smbios_table + 1))
+		return NULL;
 
-	return EFI_SUCCESS;
+	str = (char *)hdr + hdr->Length;
+	for (i = 1; i < field; i++) {
+		while (*str)
+			str++;
+
+		if (*(++str))
+			continue;
+
+		return field == (UINT8)-1 ? str + 1 : NULL;
+	}
+
+	return str;
+}
+
+static char *get_field(UINT8 type, UINT8 offset)
+{
+	SMBIOS_HEADER *hdr;
+
+	hdr = (SMBIOS_HEADER *)&smbios_table;
+	while (hdr && hdr->Type != type)
+		hdr = (SMBIOS_HEADER *)get_table_field(hdr, -1);
+
+	if (!hdr)
+		return NULL;
+
+	return get_table_field(hdr, ((UINT8 *)hdr)[offset]);
+}
+
+EFI_STATUS smbios_set(UINT8 type, UINT8 offset, const char *value)
+{
+	char *field;
+
+	field = get_field(type, offset);
+	if (!field)
+		return EFI_NOT_FOUND;
+
+	return set_field(field, value);
 }
