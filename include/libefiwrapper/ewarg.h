@@ -29,44 +29,14 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _EXTERNAL_H_
-#define _EXTERNAL_H_
+#ifndef _EWARG_H_
+#define _EWARG_H_
 
 #include <efi.h>
 #include <efiapi.h>
 
-#ifndef EXIT_FAILURE
-#define EXIT_FAILURE 1
-#endif
+EFI_STATUS ewarg_init(int argc, char **argv);
+const char *ewarg_getval(const char *name);
+EFI_STATUS ewarg_free(void);
 
-#ifndef EXIT_SUCCESS
-#define EXIT_SUCCESS 0
-#endif
-
-typedef unsigned int size_t;
-
-/* The following functions support must be supplied by the platform
-   dependant library. */
-
-/* stdlib.h */
-void *malloc(size_t size);
-void free(void *ptr);
-void *calloc(size_t nmemb, size_t size);
-void *realloc(void *ptr, size_t size);
-
-/* string.h */
-int memcmp(const void *s1, const void *s2, size_t n);
-void *memcpy(void *dest, const void *src, size_t n);
-void *memset(void *s, int c, size_t n);
-char *strdup(const char *s);
-size_t strlen(const char *s);
-char *strncat(char *dest, const char *src, size_t n);
-int strncmp(const char *s1, const char *s2, size_t n);
-
-/* stdio.h */
-int printf(const char *format, ...);
-
-/* EFI binary entry point */
-EFI_STATUS efi_main(EFI_HANDLE, EFI_SYSTEM_TABLE *);
-
-#endif	/* _EXTERNAL_H_ */
+#endif	/* _EWARG_H_ */

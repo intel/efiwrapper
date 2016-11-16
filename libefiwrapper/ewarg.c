@@ -29,44 +29,48 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _EXTERNAL_H_
-#define _EXTERNAL_H_
+#include "ewarg.h"
+#include "external.h"
 
-#include <efi.h>
-#include <efiapi.h>
+static size_t argc;
+static char **argv;
 
-#ifndef EXIT_FAILURE
-#define EXIT_FAILURE 1
-#endif
+EFI_STATUS ewarg_init(int i_argc, char **i_argv)
+{
+	if (argc || argv)
+		return EFI_ALREADY_STARTED;
 
-#ifndef EXIT_SUCCESS
-#define EXIT_SUCCESS 0
-#endif
+	if (i_argc < 0)
+		return EFI_INVALID_PARAMETER;
 
-typedef unsigned int size_t;
+	argc = i_argc;
+	argv = i_argv;
 
-/* The following functions support must be supplied by the platform
-   dependant library. */
+	return EFI_SUCCESS;
+}
 
-/* stdlib.h */
-void *malloc(size_t size);
-void free(void *ptr);
-void *calloc(size_t nmemb, size_t size);
-void *realloc(void *ptr, size_t size);
+const char *ewarg_getval(const char *name)
+{
+	size_t i, len;
 
-/* string.h */
-int memcmp(const void *s1, const void *s2, size_t n);
-void *memcpy(void *dest, const void *src, size_t n);
-void *memset(void *s, int c, size_t n);
-char *strdup(const char *s);
-size_t strlen(const char *s);
-char *strncat(char *dest, const char *src, size_t n);
-int strncmp(const char *s1, const char *s2, size_t n);
+	if (!name || !argc || !argv)
+		return NULL;
 
-/* stdio.h */
-int printf(const char *format, ...);
+	for (i = 0; i < argc; i++) {
+		len = strlen(name);
+		if (!strncmp(name, argv[i], len)
+		    && argv[i][len] == '='
+		    && argv[i][len + 1] != '\0')
+			return &argv[i][len + 1];
+	}
 
-/* EFI binary entry point */
-EFI_STATUS efi_main(EFI_HANDLE, EFI_SYSTEM_TABLE *);
+	return NULL;
+}
 
-#endif	/* _EXTERNAL_H_ */
+EFI_STATUS ewarg_free(void)
+{
+	argc = 0;
+	argv = NULL;
+
+	return EFI_SUCCESS;
+}
