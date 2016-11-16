@@ -35,8 +35,10 @@
 #include <efi.h>
 #include <efiapi.h>
 
+#define SMBIOS_UNDEFINED "N/A"
+
 EFI_STATUS smbios_init(EFI_SYSTEM_TABLE *st);
 EFI_STATUS smbios_free(EFI_SYSTEM_TABLE *st);
-EFI_STATUS smbios_set_serial_number(char *serial);
+EFI_STATUS smbios_set(UINT8 type, UINT8 offset, const char *value);
 
 #endif	/* _SMBIOS_H_ */
