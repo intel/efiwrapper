@@ -32,6 +32,8 @@
 #include <kconfig.h>
 #include <libpayload-config.h>
 #include <libpayload.h>
+#include <stdbool.h>
+#include <ewlog.h>
 
 #include "lpmemmap/lpmemmap.h"
 
@@ -72,28 +74,75 @@ static EFI_STATUS e820_to_efi(unsigned int e820, UINT32 *efi)
 	}
 }
 
+static int cmp_mem_descr(const void *a, const void *b)
+{
+	const EFI_MEMORY_DESCRIPTOR *m1 = a, *m2 = b;
+
+	if (m1->PhysicalStart < m2->PhysicalStart)
+		return -1;
+	if (m1->PhysicalStart > m2->PhysicalStart)
+		return 1;
+	return 0;
+}
+
+static void free_efimemmap(void)
+{
+	free(efimemmap);
+	efimemmap = NULL;
+	efimemmap_nb = 0;
+}
+
 static EFI_STATUS lpmemmap_to_efimemmap(struct memrange *ranges, size_t nb)
 {
 	EFI_STATUS ret;
 	size_t i;
+	bool sorted = true;
+	EFI_PHYSICAL_ADDRESS start;
+	UINT64 size;
 
 	efimemmap = malloc(nb * sizeof(*efimemmap));
 	if (!efimemmap)
 		return EFI_OUT_OF_RESOURCES;
 
 	for (i = 0; i < nb; i++) {
+		if (ranges[i].base % EFI_PAGE_SIZE ||
+		    ranges[i].size % EFI_PAGE_SIZE) {
+			ewerr("Memory ranges are not %d bytes aligned",
+			      EFI_PAGE_SIZE);
+			ret = EFI_INVALID_PARAMETER;
+			goto err;
+		}
+
 		efimemmap[i].NumberOfPages = ranges[i].size / EFI_PAGE_SIZE;
 		efimemmap[i].PhysicalStart = ranges[i].base;
 		ret = e820_to_efi(ranges[i].type, &efimemmap[i].Type);
-		if (EFI_ERROR(ret)) {
-			free(efimemmap);
-			efimemmap = NULL;
-			return ret;
+		if (EFI_ERROR(ret))
+			goto err;
+
+		if (i > 0 && cmp_mem_descr(&efimemmap[i - 1], &efimemmap[i]))
+			sorted = false;
+	}
+
+	if (!sorted)
+		qsort(efimemmap, nb, sizeof(*efimemmap), cmp_mem_descr);
+
+	/* Sanity check: verify that ranges do not overlap */
+	for (i = 0; i < nb - 1; i++) {
+		start = efimemmap[i].PhysicalStart;
+		size = efimemmap[i].NumberOfPages * EFI_PAGE_SIZE;
+		if (start + size > efimemmap[i + 1].PhysicalStart) {
+			ewerr("Memory ranges are overlapping");
+			ret = EFI_INVALID_PARAMETER;
+			goto err;
 		}
 	}
 
 	efimemmap_nb = nb;
 	return EFI_SUCCESS;
+
+err:
+	free_efimemmap();
+	return ret;
 }
 
 static EFI_CALCULATE_CRC32 crc32;
@@ -163,8 +212,7 @@ static EFI_STATUS lpmemmap_exit(EFI_SYSTEM_TABLE *st)
 
 	if (efimemmap) {
 		st->BootServices->GetMemoryMap = saved_memmap_bs;
-		free(efimemmap);
-		efimemmap_nb = 0;
+		free_efimemmap();
 	}
 
 	return EFI_SUCCESS;
