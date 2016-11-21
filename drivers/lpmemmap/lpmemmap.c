@@ -145,6 +145,75 @@ err:
 	return ret;
 }
 
+static void set_mem_descr(EFI_MEMORY_DESCRIPTOR *descr,
+			  EFI_PHYSICAL_ADDRESS start, EFI_PHYSICAL_ADDRESS end,
+			  EFI_MEMORY_TYPE type)
+{
+	descr->PhysicalStart = start;
+	descr->NumberOfPages = (end - start) / EFI_PAGE_SIZE;
+	descr->Type = type;
+}
+
+static EFI_STATUS insert_mem_descr_at(EFI_PHYSICAL_ADDRESS start, EFI_PHYSICAL_ADDRESS end,
+				      EFI_MEMORY_TYPE type, size_t pos)
+{
+	efimemmap = realloc(efimemmap, ++efimemmap_nb * sizeof(*efimemmap));
+	if (!efimemmap)
+		return EFI_OUT_OF_RESOURCES;
+
+	memmove(&efimemmap[pos + 1],
+		&efimemmap[pos],
+		(efimemmap_nb - pos - 1) * sizeof(*efimemmap));
+	set_mem_descr(&efimemmap[pos], start, end, type);
+
+	return EFI_SUCCESS;
+}
+
+/* Insert START:END memory descriptor of type TYPE into the first
+ * memory range of type EfiConventionalMemory that include START:END
+ * memory region.  */
+static EFI_STATUS insert_mem_descr(EFI_PHYSICAL_ADDRESS start,
+				   EFI_PHYSICAL_ADDRESS end,
+				   EFI_MEMORY_TYPE type)
+{
+	EFI_STATUS ret;
+	EFI_PHYSICAL_ADDRESS cur_start, cur_end;
+	EFI_MEMORY_TYPE cur_type;
+	size_t i;
+
+	if (start >= end)
+		return EFI_INVALID_PARAMETER;
+
+	for (i = 0; i < efimemmap_nb; i++) {
+		cur_start = efimemmap[i].PhysicalStart;
+		cur_end = cur_start + efimemmap[i].NumberOfPages * EFI_PAGE_SIZE;
+		cur_type = efimemmap[i].Type;
+
+		if (cur_start > start || end > cur_end)
+			continue;
+
+		if (efimemmap[i].Type != EfiConventionalMemory)
+			return EFI_INVALID_PARAMETER;
+
+		if (start > cur_start) {
+			ret = insert_mem_descr_at(cur_start, start,
+						  cur_type, i++);
+			if (EFI_ERROR(ret))
+				return ret;
+		}
+
+		set_mem_descr(&efimemmap[i], start, end, type);
+
+		if (end < cur_end)
+			return insert_mem_descr_at(end, cur_end,
+						   cur_type, i + 1);
+
+		return EFI_SUCCESS;
+	}
+
+	return EFI_INVALID_PARAMETER;
+}
+
 static EFI_CALCULATE_CRC32 crc32;
 
 static EFIAPI EFI_STATUS
@@ -181,11 +250,15 @@ get_memory_map(UINTN *MemoryMapSize, EFI_MEMORY_DESCRIPTOR *MemoryMap,
 	return EFI_SUCCESS;
 }
 
+/* Libpayload binary boundaries */
+extern char _start[], _heap[], _end[];
+
 static EFI_GET_MEMORY_MAP saved_memmap_bs;
 
 static EFI_STATUS lpmemmap_init(EFI_SYSTEM_TABLE *st)
 {
 	EFI_STATUS ret;
+	EFI_PHYSICAL_ADDRESS start, data, end;
 
 	if (!st)
 		return EFI_INVALID_PARAMETER;
@@ -198,11 +271,26 @@ static EFI_STATUS lpmemmap_init(EFI_SYSTEM_TABLE *st)
 	if (EFI_ERROR(ret))
 		return ret;
 
+	start = ALIGN_DOWN((EFI_PHYSICAL_ADDRESS)(UINTN)_start, EFI_PAGE_SIZE);
+	data = ALIGN_UP((EFI_PHYSICAL_ADDRESS)(UINTN)_heap, EFI_PAGE_SIZE);
+	ret = insert_mem_descr(start, data, EfiLoaderCode);
+	if (EFI_ERROR(ret))
+		goto err;
+
+	end = ALIGN_UP((EFI_PHYSICAL_ADDRESS)(UINTN)_end, EFI_PAGE_SIZE);
+	ret = insert_mem_descr(data, end, EfiLoaderData);
+	if (EFI_ERROR(ret))
+		goto err;
+
 	saved_memmap_bs = st->BootServices->GetMemoryMap;
 	st->BootServices->GetMemoryMap = get_memory_map;
 	crc32 = st->BootServices->CalculateCrc32;
 
 	return EFI_SUCCESS;
+
+err:
+	free_efimemmap();
+	return ret;
 }
 
 static EFI_STATUS lpmemmap_exit(EFI_SYSTEM_TABLE *st)
