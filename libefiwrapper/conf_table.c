@@ -82,14 +82,14 @@ EFI_STATUS conf_table_free(EFI_SYSTEM_TABLE *st, EFI_GUID *guid)
 		return EFI_INVALID_PARAMETER;
 
 	if (st->NumberOfTableEntries == 1) {
-		if (!guidcmp(&st->ConfigurationTable[0].VendorGuid, guid))
+		if (guidcmp(&st->ConfigurationTable[0].VendorGuid, guid))
 			return EFI_NOT_FOUND;
 		free(st->ConfigurationTable);
 		goto success;
 	}
 
 	for (i = 0; i < st->NumberOfTableEntries; i++) {
-		if (!guidcmp(&st->ConfigurationTable[i].VendorGuid, guid))
+		if (guidcmp(&st->ConfigurationTable[i].VendorGuid, guid))
 			continue;
 
 		tables = malloc((st->NumberOfTableEntries - 1) *
