@@ -176,8 +176,10 @@ EFI_STATUS efiwrapper_free(EFI_HANDLE img_handle)
 		if (!COMPONENTS[i].free)
 			continue;
 		ret = COMPONENTS[i].free(&st);
-		if (EFI_ERROR(ret))
+		if (EFI_ERROR(ret)) {
+			ewerr("%s failed to exit", COMPONENTS[i].name);
 			return ret;
+		}
 	}
 
 	ret = uefi_call_wrapper(st.BootServices->UninstallProtocolInterface, 3,
