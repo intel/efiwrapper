@@ -63,7 +63,6 @@ EFI_STATUS conf_table_new(EFI_SYSTEM_TABLE *st,
 	if (!tables)
 		return EFI_OUT_OF_RESOURCES;
 
-	free(st->ConfigurationTable);
 
 success:
 	st->ConfigurationTable = tables;
