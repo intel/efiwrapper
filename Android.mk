@@ -35,6 +35,8 @@ EFIWRAPPER_HOST_C_INCLUDES := \
 	external/gnu-efi/gnu-efi-3.0/inc/$(TARGET_EFI_ARCH_NAME) \
 	external/gnu-efi/gnu-efi-3.0/inc/protocol
 
+LOCAL_CLANG_EXCEPTION_PROJECTS += $(EFIWRAPPER_LOCAL_PATH)
+
 include $(call all-subdir-makefiles)
 
 include $(CLEAR_VARS)
