@@ -92,14 +92,38 @@ bs_free_pool(VOID *Buffer)
 	return EFI_SUCCESS;
 }
 
+typedef struct event {
+	UINT32 type;
+	EFI_TPL tpl;
+	EFI_EVENT_NOTIFY notify;
+	VOID *context;
+} event_t;
+
 static EFIAPI EFI_STATUS
-bs_create_event(__attribute__((__unused__)) UINT32 Type,
-		__attribute__((__unused__)) EFI_TPL NotifyTpl,
-		__attribute__((__unused__)) EFI_EVENT_NOTIFY NotifyFunction,
-		__attribute__((__unused__)) VOID *NotifyContext,
-		__attribute__((__unused__)) EFI_EVENT *Event)
+bs_create_event(UINT32 Type,
+		EFI_TPL NotifyTpl,
+		EFI_EVENT_NOTIFY NotifyFunction,
+		VOID *NotifyContext,
+		EFI_EVENT *Event)
 {
-	return EFI_UNSUPPORTED;
+	event_t *event;
+
+	if (!Event ||
+	    (Type & EVT_NOTIFY_SIGNAL && Type & EVT_NOTIFY_WAIT) ||
+	    (!NotifyFunction && (Type & EVT_NOTIFY_SIGNAL || Type & EVT_NOTIFY_WAIT)))
+		return EFI_INVALID_PARAMETER;
+
+	event = malloc(sizeof(*event));
+	if (!event)
+		return EFI_OUT_OF_RESOURCES;
+
+	event->type = Type;
+	event->tpl = NotifyTpl;
+	event->notify = NotifyFunction;
+	event->context = NotifyContext;
+	*Event = event;
+
+	return EFI_SUCCESS;
 }
 
 static EFIAPI EFI_STATUS
@@ -119,15 +143,26 @@ bs_wait_for_event(__attribute__((__unused__)) UINTN NumberOfEvents,
 }
 
 static EFIAPI EFI_STATUS
-bs_signal_event(__attribute__((__unused__)) EFI_EVENT Event)
+bs_signal_event(EFI_EVENT Event)
 {
-	return EFI_UNSUPPORTED;
+	event_t *event = (event_t *)Event;
+
+	if (!Event)
+		return EFI_INVALID_PARAMETER;
+
+	if (event->type != EVT_NOTIFY_SIGNAL)
+		return EFI_SUCCESS;
+
+	event->notify(Event, event->context);
+
+	return EFI_SUCCESS;
 }
 
 static EFIAPI EFI_STATUS
-bs_close_event(__attribute__((__unused__)) EFI_EVENT Event)
+bs_close_event(EFI_EVENT Event)
 {
-	return EFI_UNSUPPORTED;
+	free(Event);
+	return EFI_SUCCESS;
 }
 
 static EFIAPI EFI_STATUS
