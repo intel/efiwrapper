@@ -33,6 +33,18 @@
 #include <efiapi.h>
 #include <libsmbios.h>
 
+#if defined(HOST) && defined(__LP64__)
+#define HOST_64
+#endif
+
+#ifdef HOST_64
+#include <ewlog.h>
+#define _GNU_SOURCE
+#include <sys/mman.h>
+#include <string.h>
+#include <errno.h>
+#endif
+
 #include "conf_table.h"
 #include "external.h"
 #include "lib.h"
@@ -72,7 +84,7 @@ static struct {
 		char unused2[2];
 		char end;
 	} __attribute__((__packed__)) type2;
-} __attribute__((__packed__)) smbios_table = {
+} __attribute__((__packed__,aligned(4096))) smbios_table = {
 	{
 		.type0 = {
 			.Hdr = {
@@ -121,8 +133,7 @@ static SMBIOS_STRUCTURE_TABLE smbios = {
 	.MajorVersion = 2,
 	.MinorVersion = 2,
 	.IntermediateAnchorString = "_DMI_",
-	.TableLength = 3,
-	.TableAddress = (UINT32)&smbios_table,
+	.TableLength = 3
 };
 
 static UINT8 checksum(UINT8 *buf, size_t size)
@@ -171,6 +182,9 @@ EFI_STATUS smbios_init(EFI_SYSTEM_TABLE *st)
 	EFI_STATUS ret;
 	EFI_CONFIGURATION_TABLE *table;
 	size_t i;
+#ifdef HOST_64
+	void *addr;
+#endif
 
 	if (!st)
 		return EFI_INVALID_PARAMETER;
@@ -186,6 +200,22 @@ EFI_STATUS smbios_init(EFI_SYSTEM_TABLE *st)
 	}
 
 	table->VendorTable = &smbios;
+#ifdef HOST_64
+	/* smbios.TableAddress is a UINT32 field and cannot hold a 64
+	   bits address, we remap the smbios_table to an arbitrary
+	   address. */
+#define SMBIOS_ADDRESS 0x10000
+	addr = mremap(&smbios_table, sizeof(smbios_table), sizeof(smbios_table),
+		      MREMAP_MAYMOVE | MREMAP_FIXED, SMBIOS_ADDRESS);
+	if (addr != (void *)SMBIOS_ADDRESS) {
+		ewerr("remaping of SMBIOS table failed failed, %s",
+		      strerror(errno));
+		return EFI_DEVICE_ERROR;
+	}
+	smbios.TableAddress = SMBIOS_ADDRESS;
+#else
+	smbios.TableAddress = (UINT32)&smbios_table;
+#endif
 	smbios.EntryPointStructureChecksum = 0;
 	smbios.EntryPointStructureChecksum = checksum((UINT8 *)&smbios, sizeof(smbios));
 
