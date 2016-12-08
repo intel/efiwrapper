@@ -73,7 +73,6 @@ err:
 	return NULL;
 }
 
-
 void ewvar_free(ewvar_t *var)
 {
 	if (var->data)
@@ -169,8 +168,6 @@ EFI_STATUS ewvar_update(ewvar_t *var, UINTN size, VOID *data)
 
 	return EFI_SUCCESS;
 }
-
-
 
 EFI_STATUS ewvar_register_storage(ewvar_storage_t *s)
 {

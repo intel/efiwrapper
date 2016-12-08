@@ -35,7 +35,7 @@
 
 static EFIAPI EFI_STATUS
 rs_get_variable(CHAR16 *VariableName, EFI_GUID *VendorGuid, UINT32 *Attributes,
-	      UINTN *DataSize, VOID *Data)
+		UINTN *DataSize, VOID *Data)
 {
 	ewvar_t *var;
 
@@ -60,8 +60,8 @@ rs_get_variable(CHAR16 *VariableName, EFI_GUID *VendorGuid, UINT32 *Attributes,
 
 static EFIAPI EFI_STATUS
 rs_get_next_variable_name(UINTN *VariableNameSize,
-			CHAR16 *VariableName,
-			EFI_GUID *VendorGuid)
+			  CHAR16 *VariableName,
+			  EFI_GUID *VendorGuid)
 {
 	ewvar_t *var;
 	size_t name_size;
@@ -93,7 +93,7 @@ rs_get_next_variable_name(UINTN *VariableNameSize,
 
 static EFIAPI EFI_STATUS
 rs_set_variable(CHAR16 *VariableName, EFI_GUID *VendorGuid, UINT32 Attributes,
-	      UINTN DataSize, VOID *Data)
+		UINTN DataSize, VOID *Data)
 {
 	EFI_STATUS ret;
 	ewvar_t *var, *prev;
@@ -135,7 +135,7 @@ rs_set_variable(CHAR16 *VariableName, EFI_GUID *VendorGuid, UINT32 Attributes,
 
 static EFIAPI EFI_STATUS
 rs_get_time(__attribute__((__unused__)) EFI_TIME *Time,
-	  __attribute__((__unused__)) EFI_TIME_CAPABILITIES *Capabilities)
+	    __attribute__((__unused__)) EFI_TIME_CAPABILITIES *Capabilities)
 {
 	return EFI_UNSUPPORTED;
 }
@@ -148,31 +148,31 @@ rs_set_time(__attribute__((__unused__)) EFI_TIME *Time)
 
 static EFIAPI EFI_STATUS
 rs_get_wakeup_time(__attribute__((__unused__)) BOOLEAN *Enabled,
-		 __attribute__((__unused__)) BOOLEAN *Pending,
-		 __attribute__((__unused__)) EFI_TIME *Time)
+		   __attribute__((__unused__)) BOOLEAN *Pending,
+		   __attribute__((__unused__)) EFI_TIME *Time)
 {
 	return EFI_UNSUPPORTED;
 }
 
 static EFIAPI EFI_STATUS
 rs_set_wakeup_time(__attribute__((__unused__)) BOOLEAN Enable,
-		 __attribute__((__unused__)) EFI_TIME *Time)
+		   __attribute__((__unused__)) EFI_TIME *Time)
 {
 	return EFI_UNSUPPORTED;
 }
 
 static EFIAPI EFI_STATUS
 rs_set_virtual_address_map(__attribute__((__unused__)) UINTN MemoryMapSize,
-			 __attribute__((__unused__)) UINTN DescriptorSize,
-			 __attribute__((__unused__)) UINT32 DescriptorVersion,
-			 __attribute__((__unused__)) EFI_MEMORY_DESCRIPTOR *VirtualMap)
+			   __attribute__((__unused__)) UINTN DescriptorSize,
+			   __attribute__((__unused__)) UINT32 DescriptorVersion,
+			   __attribute__((__unused__)) EFI_MEMORY_DESCRIPTOR *VirtualMap)
 {
 	return EFI_UNSUPPORTED;
 }
 
 static EFIAPI EFI_STATUS
 rs_convert_pointer(__attribute__((__unused__)) UINTN DebugDisposition,
-		 __attribute__((__unused__)) VOID **Address)
+		   __attribute__((__unused__)) VOID **Address)
 {
 	return EFI_UNSUPPORTED;
 }
@@ -185,35 +185,35 @@ rs_get_next_high_monotonic_count(__attribute__((__unused__)) UINT32 *HighCount)
 
 static EFIAPI EFI_STATUS
 rs_reset_system(__attribute__((__unused__)) EFI_RESET_TYPE ResetType,
-	      __attribute__((__unused__)) EFI_STATUS ResetStatus,
-	      __attribute__((__unused__)) UINTN DataSize,
-	      __attribute__((__unused__)) CHAR16 *ResetData)
+		__attribute__((__unused__)) EFI_STATUS ResetStatus,
+		__attribute__((__unused__)) UINTN DataSize,
+		__attribute__((__unused__)) CHAR16 *ResetData)
 {
 	return EFI_UNSUPPORTED;
 }
 
 static EFIAPI EFI_STATUS
 rs_update_capsule(__attribute__((__unused__)) EFI_CAPSULE_HEADER **CapsuleHeaderArray,
-		__attribute__((__unused__)) UINTN CapsuleCount,
-		__attribute__((__unused__)) EFI_PHYSICAL_ADDRESS ScatterGatherList)
+		  __attribute__((__unused__)) UINTN CapsuleCount,
+		  __attribute__((__unused__)) EFI_PHYSICAL_ADDRESS ScatterGatherList)
 {
 	return EFI_UNSUPPORTED;
 }
 
 static EFIAPI EFI_STATUS
 rs_query_capsule_capabilities(__attribute__((__unused__)) EFI_CAPSULE_HEADER **CapsuleHeaderArray,
-			    __attribute__((__unused__)) UINTN CapsuleCount,
-			    __attribute__((__unused__)) UINT64 *MaximumCapsuleSize,
-			    __attribute__((__unused__)) EFI_RESET_TYPE *ResetType)
+			      __attribute__((__unused__)) UINTN CapsuleCount,
+			      __attribute__((__unused__)) UINT64 *MaximumCapsuleSize,
+			      __attribute__((__unused__)) EFI_RESET_TYPE *ResetType)
 {
 	return EFI_UNSUPPORTED;
 }
 
 static EFIAPI EFI_STATUS
 rs_query_variable_info(__attribute__((__unused__)) UINT32 Attributes,
-		     __attribute__((__unused__)) UINT64 *MaximumVariableStorageSize,
-		     __attribute__((__unused__)) UINT64 *RemainingVariableStorageSize,
-		     __attribute__((__unused__)) UINT64 *MaximumVariableSize)
+		       __attribute__((__unused__)) UINT64 *MaximumVariableStorageSize,
+		       __attribute__((__unused__)) UINT64 *RemainingVariableStorageSize,
+		       __attribute__((__unused__)) UINT64 *MaximumVariableSize)
 {
 	return EFI_UNSUPPORTED;
 }
