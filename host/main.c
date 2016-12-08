@@ -46,9 +46,13 @@
 #include <string.h>
 
 #include "disk.h"
+#include "event.h"
+#include "tcp4.h"
 
 static ewdrv_t *host_drivers[] = {
 	&disk_drv,
+	&event_drv,
+	&tcp4_drv,
 	NULL
 };
 ewdrv_t **ew_drivers = host_drivers;

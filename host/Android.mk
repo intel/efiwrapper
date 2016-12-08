@@ -9,7 +9,11 @@ LOCAL_STATIC_LIBRARIES := \
 	libefiwrapper_host-$(TARGET_BUILD_VARIANT)
 LOCAL_SRC_FILES := \
 	main.c \
-	disk.c
+	event.c \
+	disk.c \
+	fifo.c \
+	worker.c \
+	tcp4.c
 LOCAL_LDFLAGS := -ldl
 LOCAL_MODULE_HOST_ARCH := $(EFIWRAPPER_HOST_ARCH)
 LOCAL_C_INCLUDES := $(EFIWRAPPER_HOST_C_INCLUDES)
