@@ -105,9 +105,7 @@ ewvar_t *ewvar_get(const CHAR16 *name, EFI_GUID *guid, ewvar_t **prev_p)
 	ewvar_t *var, *prev = NULL;
 
 	for (var = EFI_VARS; var; var = var->next) {
-		if (str16len(name) == str16len(var->name) &&
-		    !memcmp(var->name, name, str16len(name) * sizeof(*name)) &&
-		    !memcmp(&var->guid, guid, sizeof(*guid)))
+		if (!str16cmp(name, var->name) && !guidcmp(&var->guid, guid))
 			break;
 		prev = var;
 	}
