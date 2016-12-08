@@ -149,7 +149,7 @@ EFI_STATUS ewvar_update(ewvar_t *var, UINTN size, VOID *data)
 		if (!var->data)
 			return EFI_OUT_OF_RESOURCES;
 
-		memcpy(var->data + var->size, data, size);
+		memcpy((char *)var->data + var->size, data, size);
 		var->size += size;
 	} else {
 		var->data = realloc(var->data, size);

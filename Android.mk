@@ -17,6 +17,24 @@ else
     EFIWRAPPER_CFLAGS += -DPRODUCT_MANUFACTURER=\"$(PRODUCT_MANUFACTURER)\"
 endif
 
+EFIWRAPPER_HOST_CFLAGS := \
+	$(EFIWRAPPER_CFLAGS) \
+	-fshort-wchar \
+	-DEFI_FUNCTION_WRAPPER \
+	-DGNU_EFI_USE_MS_ABI \
+	-DHOST
+
+ifeq ($(TARGET_IAFW_ARCH),x86_64)
+    EFIWRAPPER_HOST_ARCH += x86_64
+else
+    EFIWRAPPER_HOST_ARCH += x86
+endif
+
+EFIWRAPPER_HOST_C_INCLUDES := \
+	external/gnu-efi/gnu-efi-3.0/inc \
+	external/gnu-efi/gnu-efi-3.0/inc/$(TARGET_EFI_ARCH_NAME) \
+	external/gnu-efi/gnu-efi-3.0/inc/protocol
+
 include $(call all-subdir-makefiles)
 
 include $(CLEAR_VARS)

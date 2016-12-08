@@ -43,7 +43,11 @@
 #define EXIT_SUCCESS 0
 #endif
 
+#ifndef __LP64__
 typedef unsigned int size_t;
+#else
+typedef unsigned long size_t;
+#endif
 
 /* The following functions support must be supplied by the platform
    dependant library. */
