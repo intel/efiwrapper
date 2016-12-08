@@ -29,13 +29,10 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <string.h>
 #include <interface.h>
 
-#include "sdhci_mmc/sdio.h"
-#include "sdhci_mmc/SdHostIo.h"
-#include "sdhci_mmc/mmc.h"
-#include "sdhci_mmc/sdhci-internal.h"
+#include "protocol/SdHostIo.h"
+#include "sdio.h"
 
 typedef struct sdio {
 	EFI_SD_HOST_IO_PROTOCOL interface;
@@ -43,48 +40,17 @@ typedef struct sdio {
 } sdio_t;
 
 static EFIAPI EFI_STATUS
-sdio_send_command(EFI_SD_HOST_IO_PROTOCOL *This,
-		  UINT16 CommandIndex,
-		  UINT32 Argument,
-		  TRANSFER_TYPE DataType,
-		  UINT8 *Buffer,
-		  UINT32 BufferSize,
+sdio_send_command(__attribute__((__unused__)) EFI_SD_HOST_IO_PROTOCOL *This,
+		  __attribute__((__unused__)) UINT16 CommandIndex,
+		  __attribute__((__unused__)) UINT32 Argument,
+		  __attribute__((__unused__)) TRANSFER_TYPE DataType,
+		  __attribute__((__unused__)) UINT8 *Buffer,
+		  __attribute__((__unused__)) UINT32 BufferSize,
 		  __attribute__((__unused__)) RESPONSE_TYPE ResponseType,
 		  __attribute__((__unused__)) UINT32 TimeOut,
-		  UINT32 *ResponseData)
+		  __attribute__((__unused__)) UINT32 *ResponseData)
 {
-	struct cmd c;
-	int mret;
-	sdio_t *sdio = (sdio_t *)This;
-
-	memset(&c, 0, sizeof(c));
-
-	c.index = CommandIndex;
-
-	if (Buffer) {
-		c.addr = (uintptr_t)Buffer;
-		c.nblock = BufferSize / sdio->s->blk_sz;
-	}
-
-	if (DataType == InData)
-		c.flags |= CMDF_DATA_XFER | CMDF_RD_XFER | CMDF_USE_DMA;
-
-	c.resp_len = 32;
-	c.args = Argument;
-	c.retry = 5;
-
-	mret = mmc_send_cmd(&c);
-	if (mret != 0)
-		return EFI_DEVICE_ERROR;
-
-	mret = mmc_wait_cmd_done(&c);
-	if (mret != 0)
-		return EFI_DEVICE_ERROR;
-
-	if (ResponseData)
-		memcpy(ResponseData, &c.resp, sizeof(*ResponseData));
-
-	return EFI_SUCCESS;
+	return EFI_UNSUPPORTED;
 }
 
 static EFIAPI EFI_STATUS
@@ -188,6 +154,18 @@ EFI_STATUS sdio_init(EFI_SYSTEM_TABLE *st, EFI_HANDLE handle, storage_t *s)
 		return ret;
 
 	sdio->s = s;
+
+	return EFI_SUCCESS;
+}
+
+EFI_STATUS sdio_get_storage(EFI_SD_HOST_IO_PROTOCOL *This, storage_t **storage_p)
+{
+	sdio_t *sdio = (sdio_t *)This;
+
+	if (!This)
+		return EFI_INVALID_PARAMETER;
+
+	*storage_p = sdio->s;
 
 	return EFI_SUCCESS;
 }
