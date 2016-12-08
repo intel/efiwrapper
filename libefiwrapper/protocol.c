@@ -264,11 +264,11 @@ static EFIAPI EFI_STATUS
 open_protocol(EFI_HANDLE Handle,
 	      EFI_GUID *Protocol,
 	      VOID **Interface,
-	      EFI_HANDLE AgentHandle,
+	      __attribute__((__unused__)) EFI_HANDLE AgentHandle,
 	      EFI_HANDLE ControllerHandle,
 	      __attribute__((__unused__)) UINT32 Attributes)
 {
-	if (Handle != AgentHandle || ControllerHandle != NULL)
+	if (ControllerHandle != NULL)
 		return EFI_UNSUPPORTED;
 
 	return handle_protocol(Handle, Protocol, Interface);
