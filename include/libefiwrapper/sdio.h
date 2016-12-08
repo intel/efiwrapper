@@ -33,8 +33,10 @@
 #define _SDIO_H_
 
 #include <storage.h>
+#include <protocol/SdHostIo.h>
 
 EFI_STATUS sdio_init(EFI_SYSTEM_TABLE *st, EFI_HANDLE handle, storage_t *s);
+EFI_STATUS sdio_get_storage(EFI_SD_HOST_IO_PROTOCOL *This, storage_t **storage_p);
 EFI_STATUS sdio_free(EFI_SYSTEM_TABLE *st, EFI_HANDLE handle);
 
 #endif	/* _SDIO_H_ */

@@ -33,12 +33,12 @@
 #include <libpayload-config.h>
 #include <libpayload.h>
 #include <storage.h>
+#include <sdio.h>
 
 #include "sdhci_mmc/mmc.h"
 #include "sdhci_mmc/sdhci-internal.h"
 #include "sdhci_mmc/sdhci.h"
 #include "sdhci_mmc/sdhci_mmc.h"
-#include "sdhci_mmc/sdio.h"
 
 const EFI_LBA BLOCK_MAX = 0xffff;
 
@@ -147,9 +147,61 @@ static storage_t sdhci_mmc_storage = {
 
 static EFI_HANDLE handle;
 
+static EFIAPI EFI_STATUS
+sdio_send_command(EFI_SD_HOST_IO_PROTOCOL *This,
+		  UINT16 CommandIndex,
+		  UINT32 Argument,
+		  TRANSFER_TYPE DataType,
+		  UINT8 *Buffer,
+		  UINT32 BufferSize,
+		  __attribute__((__unused__)) RESPONSE_TYPE ResponseType,
+		  __attribute__((__unused__)) UINT32 TimeOut,
+		  UINT32 *ResponseData)
+{
+	EFI_STATUS ret;
+	struct cmd c;
+	int mret;
+	storage_t *storage;
+
+	ret = sdio_get_storage(This, &storage);
+	if (EFI_ERROR(ret))
+		return ret;
+
+	memset(&c, 0, sizeof(c));
+
+	c.index = CommandIndex;
+
+	if (Buffer) {
+		c.addr = (uintptr_t)Buffer;
+		c.nblock = BufferSize / storage->blk_sz;
+	}
+
+	if (DataType == InData)
+		c.flags |= CMDF_DATA_XFER | CMDF_RD_XFER | CMDF_USE_DMA;
+
+	c.resp_len = 32;
+	c.args = Argument;
+	c.retry = 5;
+
+	mret = mmc_send_cmd(&c);
+	if (mret != 0)
+		return EFI_DEVICE_ERROR;
+
+	mret = mmc_wait_cmd_done(&c);
+	if (mret != 0)
+		return EFI_DEVICE_ERROR;
+
+	if (ResponseData)
+		memcpy(ResponseData, &c.resp, sizeof(*ResponseData));
+
+	return EFI_SUCCESS;
+}
+
 static EFI_STATUS sdhci_mmc_init(EFI_SYSTEM_TABLE *st)
 {
 	EFI_STATUS ret;
+	EFI_SD_HOST_IO_PROTOCOL *sdio;
+	EFI_GUID sdio_guid = EFI_SD_HOST_IO_PROTOCOL_GUID;
 
 	if (!st)
 		return EFI_INVALID_PARAMETER;
@@ -162,6 +214,14 @@ static EFI_STATUS sdhci_mmc_init(EFI_SYSTEM_TABLE *st)
 	if (EFI_ERROR(ret))
 		storage_free(st, handle);
 
+	ret = uefi_call_wrapper(st->BootServices->HandleProtocol, 3,
+				handle, &sdio_guid, (void **)&sdio);
+	if (EFI_ERROR(ret)) {
+		sdio_free(st, handle);
+		storage_free(st, handle);
+	}
+
+	sdio->SendCommand = sdio_send_command;
 	return ret;
 }
 
