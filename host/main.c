@@ -45,7 +45,12 @@
 #include <setjmp.h>
 #include <string.h>
 
-static ewdrv_t *host_drivers[] = { NULL };
+#include "disk.h"
+
+static ewdrv_t *host_drivers[] = {
+	&disk_drv,
+	NULL
+};
 ewdrv_t **ew_drivers = host_drivers;
 
 typedef EFI_STATUS (*efi_main_t)(EFI_HANDLE image, EFI_SYSTEM_TABLE *st);
