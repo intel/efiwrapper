@@ -49,6 +49,7 @@ int guidcmp(EFI_GUID *g1, EFI_GUID *g2);
 
 CHAR16 *str16dup(const CHAR16 *str);
 size_t str16len(const CHAR16 *str);
+int str16cmp(const CHAR16 *s1, const CHAR16 *s2);
 CHAR16 *str2str16_p(const char *str);
 
 EFI_STATUS crc32(const void *buf, size_t size, UINT32 *crc_p);

@@ -60,6 +60,18 @@ size_t str16len(const CHAR16 *str)
 	return len;
 }
 
+int str16cmp(const CHAR16 *s1, const CHAR16 *s2)
+{
+	for (; *s1 && *s2 && *s1 == *s2; s1++, s2++)
+		;
+
+	if (*s1 < *s2)
+		return -1;
+	if (*s1 > *s2)
+		return 1;
+	return 0;
+}
+
 static int str2str16(const char *str, CHAR16 *str16)
 {
 	size_t i;
