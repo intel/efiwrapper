@@ -13,7 +13,8 @@ LOCAL_SRC_FILES := \
 	disk.c \
 	fifo.c \
 	worker.c \
-	tcp4.c
+	tcp4.c \
+	fileio.c
 LOCAL_LDFLAGS := -ldl
 LOCAL_MODULE_HOST_ARCH := $(EFIWRAPPER_HOST_ARCH)
 LOCAL_C_INCLUDES := $(EFIWRAPPER_HOST_C_INCLUDES)
