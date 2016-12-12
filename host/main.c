@@ -49,12 +49,14 @@
 #include "event.h"
 #include "tcp4.h"
 #include "fileio.h"
+#include "gop.h"
 
 static ewdrv_t *host_drivers[] = {
 	&disk_drv,
 	&event_drv,
 	&tcp4_drv,
 	&fileio_drv,
+	&gop_drv,
 	NULL
 };
 ewdrv_t **ew_drivers = host_drivers;

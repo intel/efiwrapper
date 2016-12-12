@@ -14,8 +14,9 @@ LOCAL_SRC_FILES := \
 	fifo.c \
 	worker.c \
 	tcp4.c \
-	fileio.c
-LOCAL_LDFLAGS := -ldl
+	fileio.c \
+	gop.c
+LOCAL_LDFLAGS := -ldl -lX11
 LOCAL_MODULE_HOST_ARCH := $(EFIWRAPPER_HOST_ARCH)
 LOCAL_C_INCLUDES := $(EFIWRAPPER_HOST_C_INCLUDES)
 include $(BUILD_HOST_EXECUTABLE)
