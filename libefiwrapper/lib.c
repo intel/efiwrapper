@@ -31,11 +31,6 @@
 
 #include "lib.h"
 
-int guidcmp(EFI_GUID *g1, EFI_GUID *g2)
-{
-	return memcmp(g1, g2, sizeof(*g1));
-}
-
 CHAR16 *str16dup(const CHAR16 *str)
 {
 	CHAR16 *dup;
@@ -48,28 +43,6 @@ CHAR16 *str16dup(const CHAR16 *str)
 
 	memcpy(dup, str, size);
 	return dup;
-}
-
-size_t str16len(const CHAR16 *str)
-{
-	size_t len;
-
-	for (len = 0; *str; len++)
-		str++;
-
-	return len;
-}
-
-int str16cmp(const CHAR16 *s1, const CHAR16 *s2)
-{
-	for (; *s1 && *s2 && *s1 == *s2; s1++, s2++)
-		;
-
-	if (*s1 < *s2)
-		return -1;
-	if (*s1 > *s2)
-		return 1;
-	return 0;
 }
 
 static int str2str16(const char *str, CHAR16 *str16)

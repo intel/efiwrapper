@@ -29,22 +29,20 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _LIB_H_
-#define _LIB_H_
+#ifndef _EWLIB_H_
+#define _EWLIB_H_
 
 #include <efi.h>
-#include <efilib.h>
+#include <efiapi.h>
 
 #include "external.h"
-#include "ewlib.h"
 
-#ifndef min
-#define min(a, b) (a < b ? a : b)
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(x) (sizeof(x)/sizeof(*x))
 #endif
 
-CHAR16 *str16dup(const CHAR16 *str);
-CHAR16 *str2str16_p(const char *str);
+int guidcmp(EFI_GUID *g1, EFI_GUID *g2);
+size_t str16len(const CHAR16 *str);
+int str16cmp(const CHAR16 *s1, const CHAR16 *s2);
 
-EFI_STATUS crc32(const void *buf, size_t size, UINT32 *crc_p);
-
-#endif	/* _LIB_H_ */
+#endif	/* _EWLIB_H_ */
