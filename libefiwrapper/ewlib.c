@@ -29,22 +29,31 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _LIB_H_
-#define _LIB_H_
-
-#include <efi.h>
-#include <efilib.h>
-
-#include "external.h"
 #include "ewlib.h"
 
-#ifndef min
-#define min(a, b) (a < b ? a : b)
-#endif
+int guidcmp(EFI_GUID *g1, EFI_GUID *g2)
+{
+	return memcmp(g1, g2, sizeof(*g1));
+}
 
-CHAR16 *str16dup(const CHAR16 *str);
-CHAR16 *str2str16_p(const char *str);
+size_t str16len(const CHAR16 *str)
+{
+	size_t len;
 
-EFI_STATUS crc32(const void *buf, size_t size, UINT32 *crc_p);
+	for (len = 0; *str; len++)
+		str++;
 
-#endif	/* _LIB_H_ */
+	return len;
+}
+
+int str16cmp(const CHAR16 *s1, const CHAR16 *s2)
+{
+	for (; *s1 && *s2 && *s1 == *s2; s1++, s2++)
+		;
+
+	if (*s1 < *s2)
+		return -1;
+	if (*s1 > *s2)
+		return 1;
+	return 0;
+}
