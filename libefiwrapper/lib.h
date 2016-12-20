@@ -38,10 +38,6 @@
 #include "external.h"
 #include "ewlib.h"
 
-#ifndef min
-#define min(a, b) (a < b ? a : b)
-#endif
-
 CHAR16 *str16dup(const CHAR16 *str);
 CHAR16 *str2str16_p(const char *str);
 
