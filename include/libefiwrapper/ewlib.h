@@ -41,6 +41,14 @@
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(*x))
 #endif
 
+#ifndef min
+#define min(a, b) (a < b ? a : b)
+#endif
+
+#ifndef max
+#define max(a, b) (a > b ? a : b)
+#endif
+
 int guidcmp(EFI_GUID *g1, EFI_GUID *g2);
 size_t str16len(const CHAR16 *str);
 int str16cmp(const CHAR16 *s1, const CHAR16 *s2);
