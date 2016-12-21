@@ -37,19 +37,23 @@
 #include <stdbool.h>
 #include <ewvar.h>
 #include <ewdrv.h>
-#include <ewlog.h>
 #include <libgen.h>
-#include <dlfcn.h>
 #include <ewlog.h>
 #include <ewlib.h>
 #include <setjmp.h>
 #include <string.h>
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "disk.h"
 #include "event.h"
 #include "tcp4.h"
 #include "fileio.h"
 #include "gop.h"
+#include "image.h"
 
 static ewdrv_t *host_drivers[] = {
 	&disk_drv,
@@ -57,6 +61,7 @@ static ewdrv_t *host_drivers[] = {
 	&tcp4_drv,
 	&fileio_drv,
 	&gop_drv,
+	&image_drv,
 	NULL
 };
 ewdrv_t **ew_drivers = host_drivers;
@@ -78,51 +83,146 @@ reset_system(__attribute__((__unused__)) EFI_RESET_TYPE ResetType,
 	return EFI_SUCCESS;
 }
 
-static EFI_STATUS so_load_and_execute(const char *path,
-				      EFI_HANDLE image,
-				      EFI_SYSTEM_TABLE *st)
+static EFI_STATUS read_file(int fd, void *data, UINTN size)
+{
+	ssize_t nb;
+	size_t remaining;
+
+	for (remaining = size; remaining; remaining -= nb) {
+		nb = read(fd, (char *)data + size - remaining, remaining);
+		if (nb == 0)
+			return EFI_INVALID_PARAMETER;
+
+		if (nb == -1) {
+			if (errno == EINTR)
+				continue;
+			return EFI_DEVICE_ERROR;
+		}
+	}
+
+	return EFI_SUCCESS;
+}
+
+static EFI_STATUS load_file(const char *path, void **data_p,
+			    UINTN *size_p)
+{
+	EFI_STATUS ret;;
+	int fd, pret;
+	struct stat sb;
+	void *data;
+
+	fd = open(path, O_RDONLY);
+	if (fd == -1) {
+		ewerr("Failed to open %s file, %s", path, strerror(errno));
+		return EFI_INVALID_PARAMETER;
+	}
+
+	pret = fstat(fd, &sb);
+	if (pret == -1) {
+		ewerr("Failed to fstat %s file, %s", path, strerror(errno));
+		ret = EFI_DEVICE_ERROR;
+		goto err;
+	}
+
+	data = malloc(sb.st_size);
+	if (!data) {
+		ewerr("Failed to allocate buffer to read %s file", path);
+		ret = EFI_OUT_OF_RESOURCES;
+		goto err;
+	}
+
+	ret = read_file(fd, data, sb.st_size);
+	if (EFI_ERROR(ret)) {
+		ewerr("Failed to read %s file", path);
+		free(data);
+		goto err;
+	}
+
+	*data_p = data;
+	*size_p = sb.st_size;
+
+err:
+	close(fd);
+	return ret;
+}
+
+
+static EFI_STATUS setup_load_image(EFI_SYSTEM_TABLE *st,
+				   EFI_HANDLE parent, EFI_HANDLE child)
+{
+	EFI_STATUS ret;
+	EFI_LOADED_IMAGE *img_parent, *img_child;
+	EFI_GUID image_guid = LOADED_IMAGE_PROTOCOL;
+
+	ret = uefi_call_wrapper(st->BootServices->HandleProtocol, 3,
+				parent, &image_guid, (void **)&img_parent);
+	if (EFI_ERROR(ret))
+		return ret;
+
+	ret = uefi_call_wrapper(st->BootServices->HandleProtocol, 3,
+				child, &image_guid, (void **)&img_child);
+	if (EFI_ERROR(ret))
+		return ret;
+
+	img_child->LoadOptions = img_parent->LoadOptions;
+	img_child->DeviceHandle = img_parent->DeviceHandle;
+
+	return EFI_SUCCESS;
+}
+
+static EFI_STATUS load_and_execute(const char *path,
+				   EFI_HANDLE parent,
+				   EFI_SYSTEM_TABLE *st)
 {
 	EFI_STATUS ret;
 	EFI_RESET_SYSTEM saved_reset_rs;
-	void *dl;
-	efi_main_t entry;
+	EFI_HANDLE image;
+	void *data;
+	UINTN size;
 	int setjmpret;
 
-	dl = dlopen(path, RTLD_NOW | RTLD_LOCAL);
-	if (!dl) {
-		ewerr("dlopen failed, %s", dlerror());
-		return EFI_DEVICE_ERROR;
-	}
+	ret = load_file(path, &data, &size);
+	if (EFI_ERROR(ret))
+		return ret;
 
-	entry = dlsym(dl, "efi_main");
-	if (!entry) {
-		ewerr("Cannot find efi_main symbol");
-		return EFI_COMPROMISED_DATA;
+	ret = uefi_call_wrapper(st->BootServices->LoadImage, 6,
+				FALSE, image, NULL,
+				data, size, &image);
+	free(data);
+	if (EFI_ERROR(ret)) {
+		ewerr("Failed to load image %s", path);
+		return ret;
 	}
 
 	saved_reset_rs = st->RuntimeServices->ResetSystem;
 	st->RuntimeServices->ResetSystem = reset_system;
 
+	ret = setup_load_image(st, parent, image);
+	if (EFI_ERROR(ret))
+		goto exit;
+
 	setjmpret = setjmp(jmp);
 	if (setjmpret == 0)
-		ret = entry(image, st);
+		ret = uefi_call_wrapper(st->BootServices->StartImage, 3,
+					image, NULL, NULL);
 	else
 		ret = reset_status;
 
+exit:
 	st->RuntimeServices->ResetSystem = saved_reset_rs;
-	dlclose(dl);
+	uefi_call_wrapper(st->BootServices->UnloadImage, 1, image);
+
 	return ret;
 }
 
 static void usage(int ret) __attribute__ ((noreturn));
 static void usage(int ret)
 {
-	printf("Usage: %s [OPTIONS] <ELF shared library> [ARGS]\n",
-	       cmdname);
+	printf("Usage: %s [OPTIONS] <EFI binary> [ARGS]\n", cmdname);
 	printf(" OPTIONS:\n");
-	printf(" -h,--help			Print this help\n");
-	printf(" --list-drivers			List available drivers\n");
-	printf(" --disable-drivers=DRV1,DRV2	Disable drivers DRV1 and DRV2\n");
+	printf(" -h,--help                      Print this help\n");
+	printf(" --list-drivers                 List available drivers\n");
+	printf(" --disable-drivers=DRV1,DRV2    Disable drivers DRV1 and DRV2\n");
 	exit(ret);
 }
 
@@ -269,7 +369,7 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	ret = so_load_and_execute(argv[1], image, st);
+	ret = load_and_execute(argv[1], image, st);
 	if (EFI_ERROR(ret))
 		ewerr("%s load and execute failed, ret=0x%zx",
 		      argv[1], (size_t)ret);
