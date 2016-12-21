@@ -222,7 +222,6 @@ bs_efi_exit(__attribute__((__unused__)) EFI_HANDLE ImageHandle,
 	return EFI_UNSUPPORTED;
 }
 
-
 static EFIAPI EFI_STATUS
 bs_unload_image(__attribute__((__unused__)) EFI_HANDLE ImageHandle)
 {
