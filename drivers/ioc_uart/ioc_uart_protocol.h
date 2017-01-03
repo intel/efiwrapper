@@ -53,9 +53,18 @@ EFI_STATUS
 	IN IOC_UART_PROTOCOL *This
 	);
 
+typedef
+EFI_STATUS
+(EFIAPI * EFI_FLASH_IOC_FIRMWARE) (
+	IN IOC_UART_PROTOCOL *This,
+	IN UINT8 *file_content,
+	IN UINT32 file_size
+	);
+
 struct _IOC_UART_PROTOCOL {
 	EFI_SET_SUPPRESS_HEART_BEAT_TIMEOUT SetSuppressHeartBeatTimeout;
 	EFI_NOTIFY_IOC_CM_READY NotifyIOCCMReady;
+	EFI_FLASH_IOC_FIRMWARE flash_ioc_firmware;
 } __attribute__((packed));
 
 #endif	/* _IOC_UART_PROTOCOL_H_ */
