@@ -30,7 +30,6 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
-
 #include <arch/io.h>
 #include <kconfig.h>
 #include <libpayload-config.h>
@@ -51,6 +50,7 @@
 #define CAN_NUMBER_SUS_STAT_TOGGLES_3		"T0000FFFF705035555555555\r"
 #define CAN_NUMBER_SUS_STAT_TOGGLES_2		"T0000FFFF705025555555555\r"
 #define CAN_NUMBER_SUS_STAT_TOGGLES_1		"T0000FFFF705015555555555\r"
+#define CAN_ENTER_IOC_BOOTLOADER		"T0000FFFF7FFAF5555555555\r"
 #define CAN_MSG_LENGTH   			25
 
 #define SUPPRESS_HEART_BEAT_TIMEOUT_1_MIN	1
@@ -102,6 +102,7 @@
 static UINTN uart_base_addr;
 static unsigned int old_state[7];
 static char can_message_buf[CAN_MSG_LENGTH + 1];
+uint8_t frame_number_send, frame_number_received = 0;
 
 union _pci_config_space {
 	uint32_t cfg_word [16];
@@ -283,7 +284,7 @@ static void ioc_uart_send (int ch)
 	fifo_size += 1;
 }
 
-static void ioc_uart_send_data(const char *s, unsigned int count)
+static void ioc_uart_send_data(char *s, unsigned int count)
 {
 	unsigned int i;
 
@@ -291,6 +292,37 @@ static void ioc_uart_send_data(const char *s, unsigned int count)
 		ioc_uart_send(s[i]);
 	}
 }
+
+static int ioc_uart_recv(uint8_t *buffer, unsigned int len)
+{
+	unsigned pos = 0;
+	unsigned lsr;
+
+	for (;;) {
+		lsr = read8((void *)(UINTN)(uart_base_addr + R_UART_LSR));
+
+		/* ignore transmit status bits */
+		lsr &= ~(B_UART_LSR_TXRDY | B_UART_LSR_TEMT);
+
+		if ((lsr & ~B_UART_LSR_RXRDY) != 0) {
+			/* yes, drain Rx FIFO */
+			do {
+				read8((void *)(UINTN)(uart_base_addr + R_UART_BAUD_THR));
+				lsr = read8((void *)(UINTN)(uart_base_addr + R_UART_LSR));
+			} while ((lsr & ~(B_UART_LSR_TXRDY | B_UART_LSR_TEMT)) != 0);
+
+			return -1;
+		}
+
+		if (lsr != 0)
+			buffer[pos++] = read8((void *)(UINTN)(uart_base_addr + R_UART_BAUD_THR));
+
+		/* frame complete or time-out */
+		if (pos >= len)
+			return pos;
+	}
+}
+
 
 static EFIAPI EFI_STATUS
 set_suppress_heart_beat_timeout(__attribute__((__unused__)) IOC_UART_PROTOCOL *This,
@@ -449,6 +481,496 @@ ioc_cf9_reset_system(EFI_RESET_TYPE ResetType,
 	return cf9_reset_system(ResetType);
 }
 
+ias_frame init_frame(char command)
+{
+	ias_frame data;
+
+	data.frame_counter = 0;
+	data.payload_length = 0;
+	data.command = command;
+	memset(data.content, 0x0, IAS_MAX_PAYLOAD_LENGTH);
+	data.checksum = 0;
+	data.valid = 0;
+	return data;
+}
+
+/*!
+ * Converts given ASCII hex number to int
+ * \param [in] *str - two ASCII string
+ * \return integer value
+ */
+int c_to_i(const char *str)
+{
+	unsigned char device_id[2];
+
+	device_id[0] = (int) str[0] < 58 ? (int) str[0] - 48 : tolower((int) str[0]) - 87;
+	device_id[1] = (int) str[1] < 58 ? (int) str[1] - 48 : tolower((int) str[1]) - 87;
+
+	return (unsigned int) ((device_id[0] << 4) | device_id[1]);
+}
+
+/*!
+ * Send raw frame, no response for frame is expected
+ * \param [in] tty_fd - file descriptor for the desired serial port
+ * \param [in] *data - pointer to the frame containing data
+ * \return value of write operations
+ */
+int send_frame_raw(ias_frame *data)
+{
+	int data_index = 0;
+	uint8_t send_buffer[sizeof(ias_frame)];
+	uint32_t send_index = 0;
+
+	data->frame_counter = ++frame_number_send;
+	data->checksum = data->frame_counter + data->payload_length + data->command;
+
+	send_buffer[send_index++] = data->frame_counter;
+	send_buffer[send_index++] = data->payload_length;
+	send_buffer[send_index++] = data->command;
+
+	for (data_index = 0; data_index < data->payload_length; data_index++) {
+		send_buffer[send_index++] = data->content[data_index];
+		data->checksum += data->content[data_index];
+	}
+	send_buffer[send_index++] = (data->checksum & 0xff);
+	send_buffer[send_index++] = (data->checksum >> 8);
+
+#ifdef DEBUG
+	int a, b = 1;
+
+	printf("------------------------------\n");
+	printf("Send frame content\n");
+	printf("------------------------------\n");
+	printf("Counter: %"PRIu8", payload length: %"PRIu8", command: 0x%"PRIX8", checksum: %"PRIu16"\n",
+			data->frame_counter, data->payload_length, data->command, data->checksum);
+	for (a = 0; a < data->payload_length; a++) {
+		printf(" 0x%02"PRIX8" ", data->content[a]);
+		if (!(b++ % 8))
+			printf("\n");
+	}
+	printf("\n");
+#endif
+
+	ioc_uart_send_data((char *)send_buffer, send_index);
+
+	return 0;
+}
+
+/*!
+ * Blocking function to receive a frame on UART
+ * \param [in] tty_fd - file descriptor for serial port
+ * \param [out] *frame - frame where received data is stored
+ */
+void receive_frame(ias_frame *frame, unsigned char skip_frame_counter)
+{
+	uint16_t checksum = 0;
+	int i = 0;
+
+	if (skip_frame_counter == 0)
+		ioc_uart_recv(&frame->frame_counter, 1);
+	else
+		frame->frame_counter = 1;
+
+	ioc_uart_recv(&frame->payload_length, 1);
+	ioc_uart_recv(&frame->command, 1);
+
+	ioc_uart_recv(frame->content, frame->payload_length);
+	ioc_uart_recv((unsigned char *) &frame->checksum, 1);
+	frame->checksum <<= 8;
+	ioc_uart_recv((unsigned char *) &frame->checksum, 1);
+
+	checksum = frame->frame_counter + frame->payload_length + frame->command;
+	for (i = 0; i < frame->payload_length; i++)
+		checksum += frame->content[i];
+
+#ifdef DEBUG
+	int a, b = 1;
+
+	printf("------------------------------\n");
+	printf("Frame content\n");
+	printf("------------------------------\n");
+	printf("Counter: %"PRIu8", payload length: %"PRIu8", command: 0x%"PRIX8", checksum: %"PRIu16", checksum expected: %"PRIu16"\n",
+			frame->frame_counter, frame->payload_length, frame->command, frame->checksum, checksum);
+	for (a = 0; a < frame->payload_length; a++) {
+		printf(" 0x%02"PRIX8" ", frame->content[a]);
+		if (!(b++ % 8))
+			printf("\n");
+	}
+	printf("\n");
+#endif
+
+	if (checksum == frame->checksum)
+		frame->valid = 1;
+	else
+		frame->valid = 0;
+
+	if ((frame->frame_counter == 0) && (frame->payload_length == 0) && (frame->command == 0)) {
+		printf("ERROR: receive_frame - empty string received\n");
+		frame->valid = 0;
+	}
+
+	frame_number_received++;
+}
+
+int send_frame(ias_frame *data)
+{
+	int return_value = 0;
+	int attempts = 0;
+	unsigned char done = 0;
+	ias_frame rec_frame = init_frame(0x0);
+
+	while (done == 0) {
+		send_frame_raw(data);
+		receive_frame(&rec_frame, 0);
+
+		/* check if frame is valid and if no frame loss occurred */
+		if (rec_frame.valid == 1) {
+			if (rec_frame.frame_counter == frame_number_received) {
+				/* acknowledge received */
+				if (rec_frame.command == 0x06) {
+					return_value = 0;
+					done = 1;
+				}
+				/* not acknowledge received */
+				else if (rec_frame.command == 0x07) {
+					attempts++;
+					printf("Retransmit was requested. Attempt: %i\n", attempts);
+				} else if (rec_frame.command == 0x08) {
+					done = 1;
+					return_value = 3;
+				} else {
+					/* frame error detected */
+					done = 1;
+					return_value = 4;
+				}
+			} else {
+				/* TODO */
+				/* frame loss detected */
+				done = 1;
+				return_value = 1;
+			}
+
+		} else {
+			/* TODO */
+			/* frame not valid, normally send not acknowledge, but here it is already a acknowledge */
+			done = 1;
+			return_value = 2;
+		}
+	}
+
+	return return_value;
+} /* send_frame() */
+
+ias_flash_result ias_ioc_handshake(ias_hardware_revision *hardware_revision)
+{
+	uint8_t received = 0;
+
+	printf("Waiting for IOC bootloader\n");
+
+	/* wait for charakter to receive */
+
+	/* reset protokoll information */
+	frame_number_send = 0;
+	frame_number_received = 0;
+
+	ioc_uart_recv(&received, 1);
+
+	while (received != 0x55) {
+		ioc_uart_recv(&received, 1);
+	};
+
+	if (received == 0x55) {
+		printf("Bootloader request detected.\n");
+		ioc_uart_send_data("\xAA", 1);
+
+
+		while (received == 0x55) {
+			ioc_uart_recv(&received, 1);
+		};
+
+		printf("Waiting for IOC information.\n\n");
+
+		/* get frame first send frame with target information */
+		ias_frame rec_frame = init_frame(0x0);
+
+		receive_frame(&rec_frame, 1);
+		if (rec_frame.valid == 1 && rec_frame.frame_counter == frame_number_received) {
+			if (rec_frame.command == 0x01) {
+				*hardware_revision = rec_frame.content[2];
+
+				switch (*hardware_revision) {
+				case e_ias_hardware_revision_fab_a:
+					printf("Hardware revision: BfH - FAB A/ GR with FBL version 2.2\n");
+					break;
+				case e_ias_hardware_revision_fab_b:
+					printf("Hardware revision: BfH - FAB B\n");
+					break;
+				case e_ias_hardware_revision_fab_c:
+					printf("Hardware revision: BfH - FAB C\n");
+					break;
+				case e_ias_hardware_revision_gr_fab_a:
+					printf("Hardware revision: GR FAB A/B\n");
+					break;
+				case e_ias_hardware_revision_gr_fab_b:
+					printf("Hardware revision: GR FAB A/B\n");
+					break;
+				case e_ias_hardware_revision_gr_fab_c:
+					printf("Hardware revision: GR FAB C\n");
+					break;
+				case e_ias_hardware_revision_gr_fab_d:
+					printf("Hardware revision: GR FAB D\n");
+					break;
+				case e_ias_hardware_revision_sdc_fab_a:
+					printf("Hardware revision: SDC FAB A\n");
+					break;
+				case e_ias_hardware_revision_carlake_fab_a:
+					printf("Hardware revision: CAR LAKE FAB A\n");
+					break;
+				default:
+					printf("Unknown hardware revision 0x%02X\n", *hardware_revision);
+					break;
+				}
+				printf("Flash boot loader major-minor: %"PRIu8"-%"PRIu8"\n", rec_frame.content[0], rec_frame.content[1]);
+				return e_ias_flash_result_ok;
+			} else {
+				printf("Received a frame that is illegal during handshake. No initial handshake possible. Application will exit.\n");
+				return e_ias_flash_result_handshake_failed;
+			}
+		} else {
+			printf("Frame not valid! No initial handshake possible. Application will exit.\n");
+			return e_ias_flash_result_handshake_failed;
+		}
+	} else {
+		printf("Received illegal request. Initial handshake failed.\n");
+		return e_ias_flash_result_error;
+	}
+}
+
+void ias_ioc_reset(void)
+{
+	ias_frame go_application = init_frame(0x20);
+
+	go_application.command = 0x90;
+	go_application.payload_length = 1;
+
+	send_frame_raw(&go_application);
+	printf("Restarting the IOC\n");
+}
+
+static ias_flash_result ias_flash_enter_fbl_mode(ias_hardware_revision *hardware_revision)
+{
+	printf("Restarting the IOC into the bootloader (slcan request)\n");
+	strncpy((char *)can_message_buf, (char *)CAN_ENTER_IOC_BOOTLOADER, CAN_MSG_LENGTH);
+	ioc_uart_send_data(can_message_buf, CAN_MSG_LENGTH);
+
+	return ias_ioc_handshake(hardware_revision);
+}
+
+ias_flash_result ias_parse_file(uint8_t *file_content, uint32_t file_size, ias_frame_list **frame_list)
+{
+	uint32_t offset = 0;
+	uint32_t i = 0;
+	uint32_t record_length = 0;
+	uint32_t line = 0;
+	uint32_t calc_checksum = 0;
+	uint32_t read_checksum = 0;
+	uint8_t s3_record_offset = 0;
+
+	ias_frame_list **next_frame_list_entry = frame_list;
+
+	if (frame_list == NULL)
+		return e_ias_flash_result_out_of_memory;
+
+	while (offset < file_size) {
+		++line;
+
+		/* Search start of next record. */
+		while ((offset + 1 < file_size)
+				&& (file_content[offset] != 'S'))
+			++offset;
+		/* Check the record type (we only process S2 & S3 records). */
+		if ((offset + 1 < file_size) && ((file_content[offset + 1] == '3')
+					|| (file_content[offset + 1] == '2'))) {
+			if (file_content[offset + 1] == '3')
+				s3_record_offset = 1;
+			else
+				s3_record_offset = 0;
+
+			/* Get the record length. */
+			if ((offset + 4 + (s3_record_offset * 10)) < file_size) {
+				record_length = c_to_i((char *)(&file_content[offset + 2]));
+				if (record_length - 1 > IAS_MAX_PAYLOAD_LENGTH) {
+					printf("ERROR: Payload too long (%"PRIu32")\n", record_length - 1);
+					return e_ias_flash_result_parse_error;
+				}
+			}
+
+			/* Ensure that a complete frame is remaining in the file. */
+			if ((offset + 4 + (s3_record_offset * 3) + (2*record_length)) < file_size) {
+				/* Calculate the checksum. */
+				calc_checksum = 0;
+				for (i = 0; i < record_length; ++i)
+					calc_checksum += c_to_i((char *)(&file_content[offset + 2 + 2*i]));
+
+				calc_checksum = (~calc_checksum) & 0x000000ff;
+
+				/* Validate the checksum. */
+				read_checksum = c_to_i((char *)(&file_content[offset + 2*record_length + 2]));
+				if (calc_checksum != read_checksum) {
+					printf("ERROR: Checksum mismatch in line %"PRIu32"\n", line);
+					return e_ias_flash_result_checksum_error;
+				}
+
+				/* Initialize a new frame. */
+				ias_frame s_frame = init_frame(0x0);
+
+				/* Extract the address */
+				s_frame.content[0] = c_to_i((char *) (&file_content[offset + 4]));
+				s_frame.content[1] = c_to_i((char *) (&file_content[offset + 6]));
+				s_frame.content[2] = c_to_i((char *) (&file_content[offset + 8]));
+				if (s3_record_offset != 0)
+					s_frame.content[3] = c_to_i((char *) (&file_content[offset + 10]));
+
+				/* Extract data. */
+				for (i = 0; i < record_length - 4; i++)
+					s_frame.content[3 + s3_record_offset + i] = c_to_i((char *) (&file_content[offset + 10 + (s3_record_offset * 2) + i * 2]));
+
+				/* Set the payload length. */
+				s_frame.payload_length = record_length - 1;
+
+				/* Add the frame to the frame list. */
+				*next_frame_list_entry = (ias_frame_list *)malloc(sizeof(ias_frame_list));
+				if ((*next_frame_list_entry) == NULL) {
+					printf("ERROR: Allocating frame failed. Aborting!\n");
+					return e_ias_flash_result_out_of_memory;
+				}
+				(*next_frame_list_entry)->next = NULL;
+				memcpy(&(*next_frame_list_entry)->frame, &s_frame, sizeof((*next_frame_list_entry)->frame));
+
+				/* Advance the next frame pointer */
+				next_frame_list_entry = (ias_frame_list **) &(*next_frame_list_entry)->next;
+			} else {
+				printf("ERROR: Invalid S-Record, expecting more bytes than remaining\n");
+				return e_ias_flash_result_parse_error;
+			}
+		}
+
+		/* Skip beyond the next line break. */
+		while ((offset < file_size) && (file_content[offset] != '\n'))
+			++offset;
+
+		if (offset < file_size)
+			++offset;
+	}
+
+	return e_ias_flash_result_ok;
+}
+
+
+/*!
+ * Sending whole bunch out of buffer, buffer has to be in srecord format with 128 byte lines
+ * \param [in] - tty_fd - file descriptor for the desired serial port
+ * \param [in] - *filecontent - pointer to buffer with file content
+ * \param [in] - file_size - size of buffer
+ * \param [in] - command - overwrite the default frame command
+ * \return output if successful or not
+ */
+int flash_content(ias_frame_list const *frame_list, unsigned char command)
+{
+	int error = 0;
+	uint32_t data_frame_counter = 1;
+	uint32_t num_data_frames = 0;
+	ias_frame s_frame;
+	ias_frame_list const *current_frame = NULL;
+
+	/* Count data frames. */
+	current_frame = frame_list;
+	while (current_frame != NULL) {
+		++num_data_frames;
+		current_frame = (ias_frame_list const *) current_frame->next;
+	}
+
+	/* Send data frames. */
+	current_frame = frame_list;
+	while ((current_frame != NULL) && (error == 0)) {
+		if (((data_frame_counter % 50) == 0) ||
+				(data_frame_counter == num_data_frames) ||
+				(data_frame_counter < 10)) {
+			if (data_frame_counter == 1)
+				printf("Erasing flash.\n");
+			else
+				printf("Data frame number send: %4"PRIu32"|%4"PRIu32"\r", data_frame_counter, num_data_frames);
+		}
+
+		memcpy(&s_frame, &current_frame->frame, sizeof(s_frame));
+		s_frame.command = command;
+
+		/* Send the frame. */
+		error = send_frame(&s_frame);
+		if (error != 0)
+			printf("Error occurred: %d\n", error);
+
+		++data_frame_counter;
+		current_frame = (ias_frame_list const *) current_frame->next;
+	}
+	printf("\n");
+
+	return error;
+}
+
+int ias_flash_file(unsigned char *file_content, int file_size, unsigned char command)
+{
+	int error = 0;
+	ias_frame_list *frame_list = NULL;
+	ias_frame_list *frame_iterator = NULL;
+
+	/* Try to parse the input file. */
+	error = ias_parse_file(file_content, file_size, &frame_list);
+
+	/* Try to flash the input file .*/
+	if (error == 0) {
+		error = flash_content(frame_list, command);
+
+		if (error == 0)
+			printf("\nFlashing was successful.\n");
+		else if (error == 1)
+			printf("An error occurred during flashing the new firmware. A frame loss was detected.\n");
+		else if (error == 3)
+			printf("An error occurred during flashing the new firmware. The number of retransmits exceeded the maximum or IOC detected frame loss. The IOC is in fail mode.\n");
+	}
+
+	/* Clean up allocated frames. */
+	frame_iterator = frame_list;
+	while (frame_iterator != NULL) {
+		frame_list = frame_iterator;
+		frame_iterator = (ias_frame_list *)frame_iterator->next;
+		free(frame_list);
+	}
+
+	return error;
+}
+
+static ias_flash_result ias_flash_ioc_firmware(__attribute__((__unused__)) IOC_UART_PROTOCOL * This,
+		UINT8 *file_content,
+		UINT32 file_size)
+
+{
+	ias_hardware_revision hardware_revision;
+
+	init_uart_ioc(old_state);
+	if (ias_flash_enter_fbl_mode(&hardware_revision))
+		return EFI_UNSUPPORTED;
+
+	ias_flash_file(file_content, file_size, 0x30);
+
+	/* Start the newly flashed firmware. */
+	ias_ioc_reset();
+
+	ioc_uart_restore_device(old_state);
+
+	return EFI_SUCCESS;
+}
+
 static EFI_GUID ioc_uart_guid = EFI_IOC_UART_PROTOCOL_GUID;
 static EFI_HANDLE handle;
 static EFI_RESET_SYSTEM saved_reset_rs;
@@ -457,7 +979,8 @@ static EFI_STATUS ioc_uart_init(EFI_SYSTEM_TABLE *st)
 {
 	static IOC_UART_PROTOCOL ioc_uart_default = {
 		.SetSuppressHeartBeatTimeout = set_suppress_heart_beat_timeout,
-		.NotifyIOCCMReady = notify_ioc_cm_ready
+		.NotifyIOCCMReady = notify_ioc_cm_ready,
+		.flash_ioc_firmware = ias_flash_ioc_firmware
 	};
 	IOC_UART_PROTOCOL *ioc_uart;
 

@@ -37,4 +37,46 @@
 
 extern ewdrv_t ioc_uart_drv;
 
+typedef enum {
+	e_ias_hardware_revision_fab_a = 0x0F,
+	e_ias_hardware_revision_fab_b = 0x0E,
+	e_ias_hardware_revision_fab_c = 0x0D,
+	e_ias_hardware_revision_gr_fab_a = 0x07,
+	e_ias_hardware_revision_gr_fab_b = 0x03,
+	e_ias_hardware_revision_gr_fab_c = 0x05,
+	e_ias_hardware_revision_gr_fab_d = 0x06,
+	e_ias_hardware_revision_sdc_fab_a = 0x09,
+	e_ias_hardware_revision_carlake_fab_a = 0x0A
+}
+ias_hardware_revision;
+
+typedef enum {
+	e_ias_flash_result_ok,
+	e_ias_flash_result_timeout,
+	e_ias_flash_result_handshake_failed,
+	e_ias_flash_result_out_of_memory,
+	e_ias_flash_result_parse_error,
+	e_ias_flash_result_checksum_error,
+	e_ias_flash_result_error
+}
+ias_flash_result;
+
+#define IAS_MAX_PAYLOAD_LENGTH 255u
+
+typedef struct ias_frame {
+	uint8_t frame_counter;
+	uint8_t payload_length;
+	uint8_t command;
+	uint8_t content[IAS_MAX_PAYLOAD_LENGTH];
+	uint16_t checksum;
+	uint8_t valid;
+}
+ias_frame;
+
+typedef struct ias_frame_list {
+	struct ias_frame_list *next;
+	ias_frame frame;
+}
+ias_frame_list;
+
 #endif	/* _IOC_UART_H_ */
