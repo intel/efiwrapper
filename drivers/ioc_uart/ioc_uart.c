@@ -378,7 +378,7 @@ notify_ioc_cm_ready(__attribute__((__unused__)) IOC_UART_PROTOCOL *This)
 }
 
 static void
-ioc_reboot(CHAR16 *ResetData)
+ioc_reboot(EFI_RESET_TYPE ResetType, CHAR16 *ResetData)
 {
 	EFI_IGNORE_SUS_STAT_TOGGLES numberignoretoggles;
 	size_t i;
@@ -395,7 +395,7 @@ ioc_reboot(CHAR16 *ResetData)
 		}
 	}
 
-	if (is_fastboot)
+	if (is_fastboot ||  ResetType == EfiResetWarm)
 		numberignoretoggles = IGNORE_SUS_STAT_2;
 	else
 		numberignoretoggles = IGNORE_SUS_STAT_1;
@@ -444,7 +444,7 @@ ioc_cf9_reset_system(EFI_RESET_TYPE ResetType,
 		 __attribute__((__unused__)) UINTN DataSize,
 		 CHAR16 *ResetData)
 {
-	ioc_reboot(ResetData);
+	ioc_reboot(ResetType, ResetData);
 
 	return cf9_reset_system(ResetType);
 }
