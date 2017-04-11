@@ -123,7 +123,7 @@ static EFI_STATUS wait_for_readiness(void)
 		return ret;
 
         pret = pthread_cond_wait(&gop->ready, &gop->lock);
-	if (ret)
+	if (pret)
 		return EFI_DEVICE_ERROR;
 
 	return gop_unlock();
@@ -139,7 +139,7 @@ static EFI_STATUS notify_is_ready(void)
 		return ret;
 
 	pret = pthread_cond_signal(&gop->ready);
-	if (ret)
+	if (pret)
 		return EFI_DEVICE_ERROR;
 
 	return gop_unlock();
