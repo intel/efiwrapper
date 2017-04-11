@@ -104,7 +104,6 @@ static inline EFI_STATUS get_running(worker_t worker, bool *running)
 
 static void *worker_run(void *arg)
 {
-	EFI_STATUS ret;
 	worker_t worker;
 
 	worker = (worker_t)arg;
