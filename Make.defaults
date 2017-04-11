@@ -1,0 +1,17 @@
+ARCH := $(shell uname -m | sed s/i[3-9]86/ia32/)
+GNU_EFI_PATH ?= /usr/local/include/efi
+GNU_EFI_INCS := -I$(GNU_EFI_PATH) \
+	        -I$(GNU_EFI_PATH)/$(ARCH) \
+	        -I$(GNU_EFI_PATH)/protocol
+
+EW_INCS = -I$(SRC_DIR)/include/libefiwrapper
+EW_LIB  = $(SRC_DIR)/libefiwrapper/libefiwrapper_host-$(TARGET_BUILD_VARIANT).a
+
+PRODUCT_MANUFACTURER ?= unknown
+PRODUCT_NAME         ?= default_name
+
+CFLAGS = -Wall -Werror -fshort-wchar -DGNU_EFI_USE_MS_ABI $(EXTRA_CFLAGS)
+
+#default rule
+%.o: %.c
+	$(CC) $(CFLAGS) $(GNU_EFI_INCS) $(EW_INCS) -c $< -o $@
