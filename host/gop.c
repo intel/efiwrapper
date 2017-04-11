@@ -444,7 +444,6 @@ static EFI_STATUS gop_init(EFI_SYSTEM_TABLE *st)
 			.Mode = &mode
 		}
 	};
-	EFI_STATUS ret;
 
 	if (!st)
 		return EFI_INVALID_PARAMETER;
