@@ -275,7 +275,6 @@ static void disable_driver(char *name)
 
 static void disable_drivers(char *names)
 {
-	EFI_STATUS ret;
 	char *saveptr, *name;
 
 	name = strtok_r(names, ",", &saveptr);
@@ -321,8 +320,6 @@ static struct option *get_option(char *name, char **arg)
 
 static void parse_options(int *argc, char ***argv)
 {
-	EFI_STATUS ret;
-	char c;
 	size_t i;
 	struct option *option;
 	char *cur, *arg;

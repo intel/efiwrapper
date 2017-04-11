@@ -204,8 +204,6 @@ static EFI_STATUS event_init(EFI_SYSTEM_TABLE *st)
 
 static EFI_STATUS event_exit(EFI_SYSTEM_TABLE *st)
 {
-	EFI_STATUS ret;
-
 	if (!st)
 		return EFI_INVALID_PARAMETER;
 
