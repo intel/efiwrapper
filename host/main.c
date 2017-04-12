@@ -54,6 +54,7 @@
 #include "fileio.h"
 #include "gop.h"
 #include "image.h"
+#include "host_time.h"
 
 static ewdrv_t *host_drivers[] = {
 	&disk_drv,
@@ -62,6 +63,7 @@ static ewdrv_t *host_drivers[] = {
 	&fileio_drv,
 	&gop_drv,
 	&image_drv,
+	&time_drv,
 	NULL
 };
 ewdrv_t **ew_drivers = host_drivers;
