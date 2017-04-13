@@ -11,7 +11,8 @@ OBJS := main.o \
 	gop.o \
 	image.o \
 	pe.o \
-	host_time.o
+	host_time.o \
+	terminal_conin.o
 
 LDFLAGS := -lX11 -lpthread
 
