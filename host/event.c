@@ -140,8 +140,10 @@ wait_for_event(UINTN NumberOfEvents,
 	}
 
         ret = pthread_cond_wait(&event->cond, &event->lock);
-	if (ret)
+	if (ret) {
+		pthread_mutex_unlock(&event->lock);
 		return EFI_DEVICE_ERROR;
+	}
 
         ret = pthread_mutex_unlock(&event->lock);
 	if (ret)
@@ -171,8 +173,10 @@ signal_event(EFI_EVENT Event)
 		return EFI_DEVICE_ERROR;
 
 	ret = pthread_cond_signal(&event->cond);
-	if (ret)
+	if (ret) {
+		pthread_mutex_unlock(&event->lock);
 		return EFI_DEVICE_ERROR;
+	}
 
 	ret = pthread_mutex_unlock(&event->lock);
 	if (ret)
