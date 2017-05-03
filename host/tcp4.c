@@ -372,7 +372,6 @@ tcp4_accept(EFI_TCP4 *This,
 	    EFI_TCP4_LISTEN_TOKEN *ListenToken)
 {
 	tcp4_t *tcp = (tcp4_t *)This;
-	int ret;
 
 	if (!This || !ListenToken)
 		return EFI_INVALID_PARAMETER;

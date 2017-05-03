@@ -29,21 +29,21 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <efi.h>
-#include <efiapi.h>
-#include <libsmbios.h>
-
 #if defined(HOST) && defined(__LP64__)
 #define HOST_64
 #endif
 
 #ifdef HOST_64
-#include <ewlog.h>
 #define _GNU_SOURCE
 #include <sys/mman.h>
 #include <string.h>
 #include <errno.h>
+#include <ewlog.h>
 #endif
+
+#include <efi.h>
+#include <efiapi.h>
+#include <libsmbios.h>
 
 #include "conf_table.h"
 #include "external.h"

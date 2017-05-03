@@ -17,7 +17,9 @@ LOCAL_SRC_FILES := \
 	fileio.c \
 	gop.c \
 	image.c \
-	pe.c
+	pe.c \
+	host_time.c \
+	terminal_conin.c
 LOCAL_LDFLAGS := -ldl -lX11
 LOCAL_MODULE_HOST_ARCH := $(EFIWRAPPER_HOST_ARCH)
 LOCAL_C_INCLUDES := $(EFIWRAPPER_HOST_C_INCLUDES)
