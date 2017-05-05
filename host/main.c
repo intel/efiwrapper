@@ -54,6 +54,8 @@
 #include "fileio.h"
 #include "gop.h"
 #include "image.h"
+#include "host_time.h"
+#include "terminal_conin.h"
 
 static ewdrv_t *host_drivers[] = {
 	&disk_drv,
@@ -62,6 +64,8 @@ static ewdrv_t *host_drivers[] = {
 	&fileio_drv,
 	&gop_drv,
 	&image_drv,
+	&time_drv,
+	&terminal_conin_drv,
 	NULL
 };
 ewdrv_t **ew_drivers = host_drivers;
@@ -275,7 +279,6 @@ static void disable_driver(char *name)
 
 static void disable_drivers(char *names)
 {
-	EFI_STATUS ret;
 	char *saveptr, *name;
 
 	name = strtok_r(names, ",", &saveptr);
@@ -321,8 +324,6 @@ static struct option *get_option(char *name, char **arg)
 
 static void parse_options(int *argc, char ***argv)
 {
-	EFI_STATUS ret;
-	char c;
 	size_t i;
 	struct option *option;
 	char *cur, *arg;

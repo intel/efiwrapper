@@ -45,6 +45,15 @@ typedef struct event {
 	pthread_cond_t cond;
 } event_t;
 
+static void *call_notify(void *arg)
+{
+	event_t *event = (event_t *)arg;
+
+	event->notify(event, event->context);
+
+	return NULL;
+}
+
 static EFIAPI EFI_STATUS
 create_event(UINT32 Type,
 	     EFI_TPL NotifyTpl,
@@ -103,6 +112,7 @@ wait_for_event(UINTN NumberOfEvents,
 {
 	event_t *event;
 	int ret;
+	pthread_t thread_notify;
 
 	if (!Event || !Index)
 		return EFI_INVALID_PARAMETER;
@@ -118,9 +128,22 @@ wait_for_event(UINTN NumberOfEvents,
 	if (ret)
 		return EFI_DEVICE_ERROR;
 
+	if (event->type == EVT_NOTIFY_WAIT) {
+		ret = pthread_create(&thread_notify, NULL, call_notify, event);
+		if (ret) {
+			pthread_mutex_unlock(&event->lock);
+			return EFI_DEVICE_ERROR;
+		}
+		ret = pthread_detach(thread_notify);
+		if (ret)
+			ewdbg("Fail to detach notify thread");
+	}
+
         ret = pthread_cond_wait(&event->cond, &event->lock);
-	if (ret)
+	if (ret) {
+		pthread_mutex_unlock(&event->lock);
 		return EFI_DEVICE_ERROR;
+	}
 
         ret = pthread_mutex_unlock(&event->lock);
 	if (ret)
@@ -150,8 +173,10 @@ signal_event(EFI_EVENT Event)
 		return EFI_DEVICE_ERROR;
 
 	ret = pthread_cond_signal(&event->cond);
-	if (ret)
+	if (ret) {
+		pthread_mutex_unlock(&event->lock);
 		return EFI_DEVICE_ERROR;
+	}
 
 	ret = pthread_mutex_unlock(&event->lock);
 	if (ret)
@@ -204,8 +229,6 @@ static EFI_STATUS event_init(EFI_SYSTEM_TABLE *st)
 
 static EFI_STATUS event_exit(EFI_SYSTEM_TABLE *st)
 {
-	EFI_STATUS ret;
-
 	if (!st)
 		return EFI_INVALID_PARAMETER;
 
