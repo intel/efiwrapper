@@ -1,8 +1,8 @@
 /*
- * Copyright (c) 2016, Intel Corporation
+ * Copyright (c) 2017, Intel Corporation
  * All rights reserved.
  *
- * Author: Jérémy Compostella <jeremy.compostella@intel.com>
+ * Author: Léo Sartre <leo.sartre@intel.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,17 +29,11 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _VERSION_H_
-#define _VERSION_H_
+#ifndef _HOST_TIME_H_
+#define _HOST_TIME_H_
 
-#if defined(USER)
-#define BUILD_VARIANT           ""
-#elif defined(USERDEBUG)
-#define BUILD_VARIANT           "-userdebug"
-#else
-#define BUILD_VARIANT           "-eng"
-#endif
+#include <ewdrv.h>
 
-#define EFIWRAPPER_VERSION "efiwrapper-01.09" BUILD_VARIANT
+extern ewdrv_t time_drv;
 
-#endif	/* _VERSION_H_ */
+#endif	/* _HOST_TIME_H_ */

@@ -56,18 +56,33 @@ static EFI_STATUS _init(storage_t *s)
 	char c = 0;
 	ssize_t size;
 	off64_t off;
+	int ret;
+	struct stat sb;
 
 	s->blk_sz = DISK_BLK_SZ;
-	s->blk_cnt = DISK_SIZE / DISK_BLK_SZ;
 
 	fd = open(DISK_PATH, O_RDWR, 0644);
-	if (fd >= 0)
+	if (fd >= 0) {
+		ret = fstat(fd, &sb);
+		if (ret == -1) {
+			ewerr("Failed to fstat %s disk file, %s",
+			      DISK_PATH, strerror(errno));
+			return EFI_DEVICE_ERROR;
+		}
+
+		if (!S_ISREG(sb.st_mode))
+			return EFI_DEVICE_ERROR;
+
+		s->blk_cnt = sb.st_size / DISK_BLK_SZ;
 		return EFI_SUCCESS;
+	}
 	if (errno != ENOENT) {
 		ewerr("Failed to open %s disk file, %s",
 		      DISK_PATH, strerror(errno));
 		return EFI_DEVICE_ERROR;
 	}
+
+	s->blk_cnt = DISK_SIZE / DISK_BLK_SZ;
 
 	fd = open(DISK_PATH, O_RDWR | O_CREAT, 0644);
 	if (fd == -1) {
