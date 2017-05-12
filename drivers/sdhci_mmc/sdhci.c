@@ -108,11 +108,12 @@ static int sdhci_set_clock(struct sdhci *host, uint32_t freq)
 		}
 	}
 
+	div >>= 1;
 
 	clk = SDHCI_CLOCK_ENABLE | (div << SDHCI_DIVIDER_SHIFT);
 
 	sdhci_write16(host, SDHCI_CLOCK_CONTROL, clk);
-	while (!((clk = sdhci_read16(host, SDHCI_CLOCK_CONTROL)) & SDHCI_CLOCK_STABLE))
+	while (!(sdhci_read16(host, SDHCI_CLOCK_CONTROL) & SDHCI_CLOCK_STABLE))
 	{
                 if (timer_us(start) > 100 * 1000)
 			return 1;
