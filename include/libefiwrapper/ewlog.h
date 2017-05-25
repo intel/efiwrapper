@@ -34,10 +34,14 @@
 
 #include <external.h>
 
+#ifdef DISABLE_DEBUG_PRINT
+#define DEBUG_MESSAGES 0
+#else
 #ifdef USER
 #define DEBUG_MESSAGES 0
 #else
 #define DEBUG_MESSAGES 1
+#endif
 #endif
 
 #define EWLOG_PREFIX "efiwrapper: "
