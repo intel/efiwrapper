@@ -96,7 +96,7 @@ uint64_t mmc_read_count(void) {
 ** Print salient properties read from the eMMC CID and EXT_CSD registers
 ** (protocol version, device capacity, boot partition settings etc.)
 */
-#ifndef USER
+#if DEBUG_MESSAGES
 static void
 emmc_show_hwinfo(struct mmc *m)
 {
@@ -469,7 +469,7 @@ int mmc_init_card(pcidev_t dev)
 		return 1;
 	}
 
-#ifndef USER
+#if DEBUG_MESSAGES
 	emmc_show_hwinfo(m);
 #endif
 	m->init = 1;
