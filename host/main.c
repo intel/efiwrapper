@@ -32,6 +32,7 @@
 #include <efi.h>
 #include <efiapi.h>
 #include <efiwrapper.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
