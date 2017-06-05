@@ -178,6 +178,8 @@ sdio_send_command(EFI_SD_HOST_IO_PROTOCOL *This,
 
 	if (DataType == InData)
 		c.flags |= CMDF_DATA_XFER | CMDF_RD_XFER | CMDF_USE_DMA;
+	else if (DataType == OutData)
+		c.flags |= CMDF_DATA_XFER | CMDF_WR_XFER | CMDF_USE_DMA | CMDF_BUSY_CHECK;
 
 	c.resp_len = 32;
 	c.args = Argument;
