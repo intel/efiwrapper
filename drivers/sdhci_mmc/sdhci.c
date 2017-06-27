@@ -31,7 +31,9 @@
 #include "sdhci_mmc/sdhci-internal.h"
 #include "sdhci_mmc/mmc.h"
 
-#define ms(x) ((x) * 1000)
+#define ms(x)			  	((x) * 1000)
+#define RPMB_PARTITION		  	3
+#define EXT_CSD_PARTITION_CONFIG	179
 
 static void sdhci_reset(struct sdhci *host, uint8_t mask)
 {
@@ -235,7 +237,11 @@ sdhci_send_cmd(struct mmc *m, struct cmd *c)
 			tmode |= TM_USE_DMA;
 
 		if (c->nblock > 1)
-			tmode |= (TM_MULTI_BLOCK | TM_BLOCK_CNT_ENABLE | TM_AUTO_CMD12_ENABLE);
+		{
+			if (m->ext_csd[EXT_CSD_PARTITION_CONFIG] != RPMB_PARTITION)
+				tmode |= TM_AUTO_CMD12_ENABLE;
+			tmode |= (TM_MULTI_BLOCK | TM_BLOCK_CNT_ENABLE);
+		}
 
 		sdhci_write16(host, SDHCI_BLOCK_CNT, c->nblock);
 		sdhci_write32(host, SDHCI_DMA_ADDR, c->addr);

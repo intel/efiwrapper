@@ -225,7 +225,6 @@ static void mmc_set_rca(struct mmc *m)
 static int mmc_read_ext_csd(struct mmc *m)
 {
 	struct cmd c;
-
 	c.index    = CMD_GET_EXT_CSD;
 	c.addr     = (uintptr_t) m->ext_csd;
 	c.flags    = CMDF_DATA_XFER | CMDF_RD_XFER | CMDF_USE_DMA;
@@ -234,6 +233,12 @@ static int mmc_read_ext_csd(struct mmc *m)
 	c.args     = 0;
 
 	return __mmc_send_cmd(&c);
+}
+
+int mmc_update_ext_csd()
+{
+	struct mmc *m = &card;
+	return mmc_read_ext_csd(m);
 }
 
 int
