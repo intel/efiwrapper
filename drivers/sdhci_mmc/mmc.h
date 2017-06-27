@@ -169,4 +169,5 @@ extern int mmc_enable_sdr25(struct mmc *m);
 
 extern void mmc_dll_tune(void);
 extern uint64_t mmc_read_count(void);
+extern int mmc_update_ext_csd(void);
 #endif

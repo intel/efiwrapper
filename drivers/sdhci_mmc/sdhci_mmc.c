@@ -196,6 +196,11 @@ sdio_send_command(EFI_SD_HOST_IO_PROTOCOL *This,
 	if (ResponseData)
 		memcpy(ResponseData, &c.resp, sizeof(*ResponseData));
 
+	if (CommandIndex == CMD_SWITCH) {
+		mdelay(1);
+		mmc_update_ext_csd();
+	}
+
 	return EFI_SUCCESS;
 }
 
