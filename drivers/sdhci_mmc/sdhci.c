@@ -91,7 +91,7 @@ static void sdhci_set_voltage(struct sdhci *host, uint8_t power)
 static int sdhci_set_clock(struct sdhci *host, uint32_t freq)
 {
 	uint16_t div, clk;
-        uint64_t start = timer_us(0);
+	uint64_t start = timer_us(0);
 
 	/* Use 400 Khz as an initialization frequency */
 	if (freq == (uint32_t)-1)
@@ -117,7 +117,7 @@ static int sdhci_set_clock(struct sdhci *host, uint32_t freq)
 	sdhci_write16(host, SDHCI_CLOCK_CONTROL, clk);
 	while (!(sdhci_read16(host, SDHCI_CLOCK_CONTROL) & SDHCI_CLOCK_STABLE))
 	{
-                if (timer_us(start) > 100 * 1000)
+		if (timer_us(start) > 100 * 1000)
 			return 1;
 	}
 
@@ -215,6 +215,9 @@ static uint16_t sdhci_make_cmd(struct cmd *c)
 		break;
 	}
 
+	if (c->flags & CMDF_DATA_XFER)
+		ret |= SDHCI_CMD_DATA_PRESENT;
+
 	ret |= (c->index << SDHCI_CMD_INDEX_SHIFT);
 	return ret;
 
@@ -225,6 +228,22 @@ sdhci_send_cmd(struct mmc *m, struct cmd *c)
 {
 	struct sdhci *host = m->host;
 	uint16_t tmode = 0;
+	uint16_t Timeout;
+	uint32_t Data32;
+
+	Timeout = 10000;
+	do
+	{
+		Data32 = sdhci_read16 (host, SDHCI_PRESENT_STATE);
+		udelay(10);
+	} while ((Timeout-- > 0) && (Data32 & SDHCI_CMD_INHIBIT));
+
+	Timeout = 90;
+	do
+	{
+		Data32 = sdhci_read16 (host, SDHCI_PRESENT_STATE);
+		mdelay(2);
+	} while ((Timeout-- > 0) && (Data32 & SDHCI_DATA_INHIBIT));
 
 	/* clear irq_status/err_sts register */
 	sdhci_write32(host, SDHCI_INT_STATUS, 0xffffffff);
@@ -237,11 +256,7 @@ sdhci_send_cmd(struct mmc *m, struct cmd *c)
 			tmode |= TM_USE_DMA;
 
 		if (c->nblock > 1)
-		{
-			if (m->ext_csd[EXT_CSD_PARTITION_CONFIG] != RPMB_PARTITION)
-				tmode |= TM_AUTO_CMD12_ENABLE;
 			tmode |= (TM_MULTI_BLOCK | TM_BLOCK_CNT_ENABLE);
-		}
 
 		sdhci_write16(host, SDHCI_BLOCK_CNT, c->nblock);
 		sdhci_write32(host, SDHCI_DMA_ADDR, c->addr);
@@ -343,7 +358,7 @@ sdhci_wait_cmd_done(struct mmc *m, struct cmd *c)
 		{
 			nis = sdhci_read16(host, SDHCI_INT_STATUS);
 
-	                if (timer_us(start) > ms(4000))
+			if (timer_us(start) > ms(4000))
 			{
 				ewerr("CMD timeout");
 				goto exit;
@@ -368,6 +383,7 @@ sdhci_wait_cmd_done(struct mmc *m, struct cmd *c)
 			}
 		}
 
+		sdhci_write16(host, SDHCI_INT_STATUS, SDHCI_INT_DMA_INT);
 		sdhci_write16(host, SDHCI_INT_STATUS, SDHCI_INT_XFER_COMPLETE);
 	}
 

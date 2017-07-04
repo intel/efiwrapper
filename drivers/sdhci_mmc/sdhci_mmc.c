@@ -75,6 +75,26 @@ static EFI_STATUS _init(storage_t *s)
 	return EFI_SUCCESS;
 }
 
+static EFI_STATUS set_block_count(unsigned count)
+{
+	int ret;
+	struct cmd send_cmd;
+
+	memset(&send_cmd, 0, sizeof(send_cmd));
+	send_cmd.args = count;
+	send_cmd.resp_len = 32;
+	send_cmd.flags = 0;
+	send_cmd.index = CMD_SET_BLOCK_COUNT;
+	send_cmd.retry = 5;
+	ret = mmc_send_cmd(&send_cmd);
+	if (ret)
+		return EFI_DEVICE_ERROR;
+
+	ret = mmc_wait_cmd_done(&send_cmd);
+
+	return ret ? EFI_DEVICE_ERROR : EFI_SUCCESS;
+}
+
 static EFI_STATUS transfer_data(bool read, EFI_LBA start, EFI_LBA count, void *buf)
 {
 	int ret;
@@ -87,14 +107,28 @@ static EFI_STATUS transfer_data(bool read, EFI_LBA start, EFI_LBA count, void *b
 	send_cmd.addr = (uintptr_t)buf;
 	send_cmd.resp_len = 32;
 	send_cmd.flags = CMDF_DATA_XFER | CMDF_USE_DMA;
-
 	send_cmd.flags |= read ? CMDF_RD_XFER : CMDF_WR_XFER;
-	if (read)
-		send_cmd.index = count > 1 ?
-			CMD_READ_MULTIPLE_BLOCKS : CMD_READ_SINGLE_BLOCK;
-	else
-		send_cmd.index = count > 1 ?
-			CMD_WRITE_MULTIPLE_BLOCKS : CMD_WRITE_SINGLE_BLOCK;
+
+	if (read) {
+		if (count > 1) {
+			send_cmd.index = CMD_READ_MULTIPLE_BLOCKS;
+			ret = set_block_count(count);
+			if (EFI_ERROR(ret))
+				return EFI_DEVICE_ERROR;
+		}
+		else
+			send_cmd.index = CMD_READ_SINGLE_BLOCK;
+	}
+	else {
+		if (count > 1) {
+			send_cmd.index = CMD_WRITE_MULTIPLE_BLOCKS;
+			ret = set_block_count(count);
+			if (EFI_ERROR(ret))
+				return EFI_DEVICE_ERROR;
+		}
+		else
+			send_cmd.index = CMD_WRITE_SINGLE_BLOCK;
+	}
 
 	ret = mmc_send_cmd(&send_cmd);
 	if (ret)
@@ -177,9 +211,12 @@ sdio_send_command(EFI_SD_HOST_IO_PROTOCOL *This,
 	}
 
 	if (DataType == InData)
-		c.flags |= CMDF_DATA_XFER | CMDF_RD_XFER | CMDF_USE_DMA;
+		c.flags |= CMDF_RD_XFER;
 	else if (DataType == OutData)
-		c.flags |= CMDF_DATA_XFER | CMDF_WR_XFER | CMDF_USE_DMA | CMDF_BUSY_CHECK;
+		c.flags |= CMDF_WR_XFER;
+
+	if (DataType != NoData)
+		c.flags |= CMDF_DATA_XFER | CMDF_USE_DMA;
 
 	c.resp_len = 32;
 	c.args = Argument;
