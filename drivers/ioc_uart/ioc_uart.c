@@ -409,13 +409,14 @@ notify_ioc_cm_ready(__attribute__((__unused__)) IOC_UART_PROTOCOL *This)
 	return EFI_SUCCESS;
 }
 
-static void
+static EFI_STATUS
 ioc_reboot(EFI_RESET_TYPE ResetType, CHAR16 *ResetData)
 {
 	EFI_IGNORE_SUS_STAT_TOGGLES numberignoretoggles;
 	size_t i;
 	CHAR16 *fastboot_name[] = {L"bootloader", L"fastboot"};
 	BOOLEAN is_fastboot = FALSE;
+	EFI_STATUS ret;
 
 	if (ResetData) {
 		for (i = 0; i < ARRAY_SIZE(fastboot_name); i++) {
@@ -432,53 +433,14 @@ ioc_reboot(EFI_RESET_TYPE ResetType, CHAR16 *ResetData)
 	else
 		numberignoretoggles = IGNORE_SUS_STAT_1;
 
-	set_ignore_sus_stat_toggles(numberignoretoggles);
-	set_shutdown_behaviour(RESTART_SYSTEM);
-}
-
-static EFIAPI EFI_STATUS
-cf9_reset_system(EFI_RESET_TYPE ResetType)
-{
-	UINT8 code;
-	UINT8 cf9;
-	UINT32 port = 0xcf9;
-
-	if (ResetType == EfiResetShutdown)
-		return EFI_UNSUPPORTED;
-
-	switch (ResetType) {
-	case EfiResetWarm:
-		code = 0x06;
-		break;
-
-	case EfiResetCold:
-		code = 0x0E;
-		break;
-
-	case EfiResetShutdown:
-	default:
-		return EFI_UNSUPPORTED;
+	ret = set_ignore_sus_stat_toggles(numberignoretoggles);
+	if (EFI_ERROR(ret)) {
+		return ret;
 	}
 
-	cf9 = inb(port) & ~code;
-	outb(cf9 | 2, port);
-	udelay(50);
+	ret = set_shutdown_behaviour(RESTART_SYSTEM);
 
-	outb(cf9 | code, port);
-	udelay(500);
-
-	return EFI_DEVICE_ERROR;
-}
-
-static EFIAPI EFI_STATUS
-ioc_cf9_reset_system(EFI_RESET_TYPE ResetType,
-		 __attribute__((__unused__)) EFI_STATUS ResetStatus,
-		 __attribute__((__unused__)) UINTN DataSize,
-		 CHAR16 *ResetData)
-{
-	ioc_reboot(ResetType, ResetData);
-
-	return cf9_reset_system(ResetType);
+	return ret;
 }
 
 ias_frame init_frame(char command)
@@ -975,6 +937,21 @@ static EFI_GUID ioc_uart_guid = EFI_IOC_UART_PROTOCOL_GUID;
 static EFI_HANDLE handle;
 static EFI_RESET_SYSTEM saved_reset_rs;
 
+static EFIAPI EFI_STATUS
+ioc_reset_system(EFI_RESET_TYPE ResetType,
+		 EFI_STATUS ResetStatus,
+		 UINTN DataSize,
+		 CHAR16 *ResetData)
+{
+	EFI_STATUS ret;
+	ret = ioc_reboot(ResetType, ResetData);
+	if (EFI_ERROR(ret)) {
+		return ret;
+	}
+
+	return saved_reset_rs ? saved_reset_rs(ResetType, ResetStatus, DataSize, ResetData) : ret;
+}
+
 static EFI_STATUS ioc_uart_init(EFI_SYSTEM_TABLE *st)
 {
 	static IOC_UART_PROTOCOL ioc_uart_default = {
@@ -985,7 +962,7 @@ static EFI_STATUS ioc_uart_init(EFI_SYSTEM_TABLE *st)
 	IOC_UART_PROTOCOL *ioc_uart;
 
 	saved_reset_rs = st->RuntimeServices->ResetSystem;
-	st->RuntimeServices->ResetSystem = ioc_cf9_reset_system;
+	st->RuntimeServices->ResetSystem = ioc_reset_system;
 
 	return interface_init(st, &ioc_uart_guid, &handle,
 			      &ioc_uart_default, sizeof(ioc_uart_default),
