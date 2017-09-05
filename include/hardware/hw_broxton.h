@@ -1,8 +1,6 @@
 /*
- * Copyright (c) 2016, Intel Corporation
+ * Copyright (c) 2017, Intel Corporation
  * All rights reserved.
- *
- * Author: Jérémy Compostella <jeremy.compostella@intel.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,30 +27,18 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <kconfig.h>
-#include <libpayload-config.h>
-#include <libpayload.h>
+#ifndef __HW_BROXTON__
+#define __HW_BROXTON__
 
-#include <hwconfig.h>
-#include "s8250mem32.h"
+/* serial port base address */
+#define SERIAL_BASEADDR    0xfc000000
 
-static EFI_STATUS s8250mem32_init(__attribute__((__unused__)) EFI_SYSTEM_TABLE *st)
-{
-	static struct cb_serial s;
+/* OTG */
+#define XDCI_PID           0x5aaa
+#define XHCI_PID           0x5aa8
 
-	s.type = CB_SERIAL_TYPE_MEMORY_MAPPED;
-	s.baseaddr = SERIAL_BASEADDR;
+/* EMMC */
+#define EMMC_DEVICEID      0x5acc
 
-	s.regwidth = 4;
-	lib_sysinfo.serial = &s;
+#endif /* __HW_BROXTON__ */
 
-	serial_console_init();
-
-	return EFI_SUCCESS;
-}
-
-ewdrv_t s8250mem32_drv = {
-	.name = "s8250mem32",
-	.description = "Initialize the libpayload 8250 serial driver for iomem 32bits",
-	.init = s8250mem32_init
-};

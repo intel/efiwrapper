@@ -1,8 +1,6 @@
 /*
- * Copyright (c) 2016, Intel Corporation
+ * Copyright (c) 2017, Intel Corporation
  * All rights reserved.
- *
- * Author: Jérémy Compostella <jeremy.compostella@intel.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,30 +27,28 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <kconfig.h>
-#include <libpayload-config.h>
-#include <libpayload.h>
 
-#include <hwconfig.h>
-#include "s8250mem32.h"
+#ifndef __HARDWARE_CONFIG__
+#define __HARDWARE_CONFIG__
 
-static EFI_STATUS s8250mem32_init(__attribute__((__unused__)) EFI_SYSTEM_TABLE *st)
-{
-	static struct cb_serial s;
 
-	s.type = CB_SERIAL_TYPE_MEMORY_MAPPED;
-	s.baseaddr = SERIAL_BASEADDR;
+#if defined(PLATFORM_ICELAKE)
 
-	s.regwidth = 4;
-	lib_sysinfo.serial = &s;
+    #include "hw_icelake.h"
 
-	serial_console_init();
+#elif defined(PLATFORM_KABYLAKE)
 
-	return EFI_SUCCESS;
-}
+    #include "hw_kabylake.h"
 
-ewdrv_t s8250mem32_drv = {
-	.name = "s8250mem32",
-	.description = "Initialize the libpayload 8250 serial driver for iomem 32bits",
-	.init = s8250mem32_init
-};
+#elif defined(PLATFORM_BROXTON)
+
+    #include "hw_broxton.h"
+
+#else
+
+    #error "Hardware Platform not defined !"
+
+#endif
+
+#endif  /* __HARDWARE_CONFIG__ */
+
