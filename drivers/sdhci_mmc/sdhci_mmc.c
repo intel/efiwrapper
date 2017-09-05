@@ -35,6 +35,8 @@
 #include <storage.h>
 #include <sdio.h>
 
+#include <hwconfig.h>
+
 #include "sdhci_mmc/mmc.h"
 #include "sdhci_mmc/sdhci-internal.h"
 #include "sdhci_mmc/sdhci.h"
@@ -47,7 +49,7 @@ static struct supported_device {
 	u16 did;
 } SUPPORTED_DEVICES[] ={
 	{ .vid = 0x1b36, .did = 0x7 },
-	{ .vid = 0x8086, .did = 0x5acc }
+	{ .vid = 0x8086, .did = EMMC_DEVICEID },
 };
 
 static EFI_STATUS _init(storage_t *s)

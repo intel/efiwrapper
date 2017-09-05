@@ -40,6 +40,8 @@
 #include <pci/pci.h>
 #include <ewlog.h>
 
+#include <hwconfig.h>
+
 #include "dw3/UsbDeviceModeProtocol.h"
 #include "dw3/XdciCommon.h"
 #include "dw3/XdciDWC.h"
@@ -79,8 +81,6 @@ static void *core_handle = NULL;
 
 /* USB XDCI, XHCI PCI IDs */
 #define INTEL_VID 0x8086
-#define XDCI_PID  0x5aaa
-#define XHCI_PID  0x5aa8
 
 static USB_DEV_CONFIG_PARAMS config_params = {	.ControllerId = USB_ID_DWC_XDCI,
 						.BaseAddress  = 0,

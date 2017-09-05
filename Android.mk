@@ -5,6 +5,18 @@ ifeq ($(TARGET_BUILD_VARIANT),user)
     EFIWRAPPER_CFLAGS += -DUSER -DUSERDEBUG
 endif
 
+ifeq ($(TARGET_DEVICE),icl_presi)
+    EFIWRAPPER_CFLAGS += -DPLATFORM_ICELAKE
+endif
+
+ifeq ($(TARGET_DEVICE),icl_presi_kbl)
+    EFIWRAPPER_CFLAGS += -DPLATFORM_KABYLAKE
+endif
+
+ifeq ($(TARGET_DEVICE),gordon_peak)
+    EFIWRAPPER_CFLAGS += -DPLATFORM_BROXTON
+endif
+
 ifeq ($(TARGET_BUILD_VARIANT),userdebug)
     EFIWRAPPER_CFLAGS += -DUSERDEBUG
 endif
