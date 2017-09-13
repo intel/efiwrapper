@@ -46,7 +46,8 @@
 
 #else
 
-    #error "Hardware Platform not defined !"
+    /* default: broxton */
+    #include "hw_broxton.h"
 
 #endif
 
