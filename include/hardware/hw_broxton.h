@@ -33,11 +33,11 @@
 /* serial port base address */
 #define SERIAL_BASEADDR    0xfc000000
 
-/* OTG */
+/* PCI device id of OTG */
 #define XDCI_PID           0x5aaa
 #define XHCI_PID           0x5aa8
 
-/* EMMC */
+/* PCI device id of EMMC controller */
 #define EMMC_DEVICEID      0x5acc
 
 #endif /* __HW_BROXTON__ */

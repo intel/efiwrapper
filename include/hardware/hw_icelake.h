@@ -33,11 +33,11 @@
 /* serial port base address */
 #define SERIAL_BASEADDR  0x8334D000
 
-/* OTG */
+/* PCI device id of OTG */
 #define XDCI_PID         0x9D30
 #define XHCI_PID         0x9D2F
 
-/* EMMC */
+/* PCI device id of EMMC controller */
 #define EMMC_DEVICEID    0x34C4
 
 #endif /* __HW_ICELAKE__ */
