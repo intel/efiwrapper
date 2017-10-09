@@ -83,10 +83,10 @@ static EFI_STATUS mmc_serial_init(__attribute__((__unused__)) EFI_SYSTEM_TABLE *
 	char *serial;
 
 	serial = build_serial();
-	if (!serial)
-		return EFI_DEVICE_ERROR;
+	if (serial)
+		smbios_set(1, offsetof(SMBIOS_TYPE1, SerialNumber), serial);
 
-	return smbios_set(1, offsetof(SMBIOS_TYPE1, SerialNumber), serial);
+	return EFI_SUCCESS;
 }
 
 ewdrv_t mmc_serial_drv = {
