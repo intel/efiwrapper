@@ -1,6 +1,7 @@
 /*
- * Copyright (c) 2017, Intel Corporation
+ * Copyright (c) 2016, Intel Corporation
  * All rights reserved.
+ *
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,39 +28,11 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __HW_ICELAKE__
-#define __HW_ICELAKE__
+#ifndef _UFS_H_
+#define _UFS_H_
 
-#define ICL_PCI_EXPRESS_BASE_ADDR           0xC0000000
-#define ICL_PCI_FUNCTION_NUMBER_PCH_SERIAL_IO_UART2   2
+#include <ewdrv.h>
 
-#include "hw_pci_uart.h"
+extern ewdrv_t ufs_drv;
 
-/* serial port base address */
-#define ICL_DEFAULT_UART_BASEADDR  0x8334D000
-
-/* PCI device id of OTG */
-#define XDCI_PID         0x9D30
-#define XHCI_PID         0x9D2F
-
-/* PCI device id of EMMC controller */
-#define EMMC_DEVICEID    0x34C4
-
-#define SERIAL_BASEADDR  IclGetPciUartBase()
-
-static inline uint32_t IclGetPciUartBase(void)
-{
-    uint32_t base;
-
-    base = GetPciUartBase(ICL_PCI_EXPRESS_BASE_ADDR, ICL_PCI_FUNCTION_NUMBER_PCH_SERIAL_IO_UART2);
-    if (base == 0)
-        base = ICL_DEFAULT_UART_BASEADDR;
-
-    return base;
-}
-
-/* UFS */
-#define UFS_PCI_DID    0x34FA
-
-#endif /* __HW_ICELAKE__ */
-
+#endif	/* _UFS_H_ */

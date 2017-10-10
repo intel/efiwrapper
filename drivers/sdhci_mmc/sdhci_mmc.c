@@ -248,9 +248,16 @@ static EFI_STATUS sdhci_mmc_init(EFI_SYSTEM_TABLE *st)
 	EFI_STATUS ret;
 	EFI_SD_HOST_IO_PROTOCOL *sdio;
 	EFI_GUID sdio_guid = EFI_SD_HOST_IO_PROTOCOL_GUID;
+	boot_dev_t *boot_dev;
 
 	if (!st)
 		return EFI_INVALID_PARAMETER;
+
+	boot_dev = get_boot_media();
+	if (!boot_dev)
+		return EFI_INVALID_PARAMETER;
+	if (boot_dev->type != STORAGE_EMMC)
+		return EFI_SUCCESS;
 
 	ret = storage_init(st, &sdhci_mmc_storage, &handle);
 	if (EFI_ERROR(ret))
