@@ -41,6 +41,10 @@
 #include <efilib.h>
 #include <storage.h>
 
+#ifndef MSG_UFS_DP
+#define MSG_UFS_DP	0x19
+#endif
+
 static EFI_GUID dp_guid = DEVICE_PATH_PROTOCOL;
 
 #define ABL_BDEV "ABL.bdev"
@@ -55,6 +59,7 @@ static boot_dev_t boot_dev = {
 struct storage_dp {
 	PCI_DEVICE_PATH pci;
 	CONTROLLER_DEVICE_PATH ctrl;
+	SCSI_DEVICE_PATH scsi_ufs;
 	EFI_DEVICE_PATH end;
 } __attribute__((__packed__));
 
@@ -77,6 +82,12 @@ static EFI_STATUS dp_init(EFI_SYSTEM_TABLE *st, media_t *media,
 	dp->ctrl.Header.Type = HARDWARE_DEVICE_PATH;
 	dp->ctrl.Header.SubType = HW_CONTROLLER_DP;
 	SetDevicePathNodeLength(&dp->ctrl.Header, sizeof(dp->ctrl));
+
+	dp->scsi_ufs.Header.Type = MESSAGING_DEVICE_PATH;
+	dp->scsi_ufs.Header.SubType = MSG_UFS_DP;
+	dp->scsi_ufs.Pun = 0;
+	dp->scsi_ufs.Lun = 0;
+	SetDevicePathNodeLength(&dp->scsi_ufs.Header, sizeof(dp->scsi_ufs));
 
 	dp->end.Type = END_DEVICE_PATH_TYPE;
 	dp->end.SubType = END_ENTIRE_DEVICE_PATH_SUBTYPE;

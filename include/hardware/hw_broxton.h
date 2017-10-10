@@ -39,6 +39,8 @@
 
 /* PCI device id of EMMC controller */
 #define EMMC_DEVICEID      0x5acc
+/* UFS is not enabled on BXT, hence set it as default value*/
+#define UFS_PCI_DID    0x0000
 
 #endif /* __HW_BROXTON__ */
 

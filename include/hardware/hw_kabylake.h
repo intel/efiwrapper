@@ -59,5 +59,7 @@ static inline uint32_t KblGetPciUartBase(void)
     return base;
 }
 
+/* Kabylake doesn't use UFS, hence set it as default value for build successfully */
+#define UFS_PCI_DID    0x00
 #endif /* __HW_KABYLAKE__ */
 
