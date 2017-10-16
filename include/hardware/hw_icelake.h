@@ -30,8 +30,10 @@
 #ifndef __HW_ICELAKE__
 #define __HW_ICELAKE__
 
+#include "hw_pci_uart.h"
+
 /* serial port base address */
-#define SERIAL_BASEADDR  0x8334D000
+#define ICL_DEFAULT_UART_BASEADDR  0x8334D000
 
 /* PCI device id of OTG */
 #define XDCI_PID         0x9D30
@@ -39,6 +41,20 @@
 
 /* PCI device id of EMMC controller */
 #define EMMC_DEVICEID    0x34C4
+
+#define SERIAL_BASEADDR  IclGetPciUartBase()
+
+static inline uint32_t IclGetPciUartBase(void)
+{
+    uint32_t base;
+
+    base = GetPciUartBase();
+    if (base == 0)
+        base = ICL_DEFAULT_UART_BASEADDR;
+
+    return base;
+}
+
 
 #endif /* __HW_ICELAKE__ */
 
