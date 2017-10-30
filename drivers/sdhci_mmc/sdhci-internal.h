@@ -33,6 +33,8 @@
 #define SDHCI_DMA_ADDR		0x00
 #define SDHCI_BLOCK_SIZE	0x04
 
+#define  SDHCI_MAKE_BLKSZ(dma, blksz)	(((dma & 0x7) << 12) | (blksz & 0xFFF))
+
 /* Block size constants */
 #define DMA_4K_BOUNDRY		0x0000
 #define DMA_8K_BOUNDRY		0x1000
@@ -70,6 +72,8 @@
 #define SDHCI_CMD_TYPE_RESUME		0x0080
 #define SDHCI_CMD_TYPE_ABORT		0x00C0
 #define SDHCI_CMD_INDEX_SHIFT		8
+
+#define SDHCI_TRNS_READ	0x10
 
 #define SDHCI_RESPONSE	0x10
 #define SDHCI_BUFFER	0x20
@@ -155,6 +159,8 @@
 #define SDHCI_UHS_DDR50		0x04
 #define SDHCI_UHS_HS400		0x05
 
+#define SDHCI_INT_DATA_AVAIL		0x00000020
+#define SDHCI_CTRL_TUNED_CLK		0x0080
 
 #define  SDHCI_CAPABILITIES	        0x40
 #define  SDHCI_TIMEOUT_CLK_MASK		0x0000003F

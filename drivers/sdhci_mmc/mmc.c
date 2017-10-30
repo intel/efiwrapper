@@ -459,6 +459,10 @@ int mmc_init_card(pcidev_t dev)
 			ewerr("MMC host hs200 enabling failure");
 			return err;
 		}
+
+		if(host->execute_tuning != NULL)
+			host->execute_tuning(m);
+
 		if (mmc_card_hs400(m)) {
 			err = mmc_enable_hs400(m);
 			if (err) {
