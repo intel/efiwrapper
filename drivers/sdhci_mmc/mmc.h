@@ -39,10 +39,12 @@
 #define CMD_SWITCH			6
 #define CMD_SELECT_CARD			7
 #define CMD_GET_EXT_CSD			8
+#define CMD_MMC_STOP_TRANSMISSION	12   /* ac                      R1b */
 #define CMD_GET_STATE			13
 #define CMD_SET_BLOCK_LENGTH		16
 #define CMD_READ_SINGLE_BLOCK		17
 #define CMD_READ_MULTIPLE_BLOCKS	18
+#define CMD_MMC_SEND_TUNING_BLOCK_HS200	21
 #define CMD_SET_BLOCK_COUNT		23
 #define CMD_WRITE_SINGLE_BLOCK		24
 #define CMD_WRITE_MULTIPLE_BLOCKS	25
@@ -107,6 +109,26 @@ struct cmd
 	uint8_t   retry;
 
 };
+
+#define MMC_RSP_PRESENT		(1 << 0)
+#define MMC_RSP_CRC			(1 << 2)		/* expect valid crc */
+#define MMC_RSP_BUSY		(1 << 3)		/* card may send busy */
+#define MMC_RSP_OPCODE		(1 << 4)		/* response contains opcode */
+
+#define MMC_CMD_MASK		(3 << 5)		/* non-SPI command type */
+#define MMC_CMD_AC			(0 << 5)
+#define MMC_CMD_ADTC		(1 << 5)
+#define MMC_CMD_BC			(2 << 5)
+#define MMC_CMD_BCR			(3 << 5)
+
+#define MMC_RSP_SPI_S1		(1 << 7)		/* one status byte */
+#define MMC_RSP_SPI_S2		(1 << 8)		/* second byte */
+#define MMC_RSP_SPI_B4		(1 << 9)		/* four data bytes */
+#define MMC_RSP_SPI_BUSY	(1 << 10)		/* card may send busy */
+#define MMC_RSP_R1			(MMC_RSP_PRESENT|MMC_RSP_CRC|MMC_RSP_OPCODE)
+#define MMC_RSP_R1B			(MMC_RSP_PRESENT|MMC_RSP_CRC|MMC_RSP_OPCODE|MMC_RSP_BUSY)
+#define MMC_RSP_SPI_R1		(MMC_RSP_SPI_S1)
+#define MMC_RSP_SPI_R1B		(MMC_RSP_SPI_S1|MMC_RSP_SPI_BUSY)
 
 /*
 ** OCR Register constants

@@ -35,6 +35,153 @@
 #define RPMB_PARTITION		  	3
 #define EXT_CSD_PARTITION_CONFIG	179
 
+#define MAX_TUNING_LOOP			40
+
+static void sdhci_reset(struct sdhci *host, uint8_t mask);
+
+static void sdhci_start_tuning(struct sdhci *host)
+{
+	uint16_t ctrl;
+
+	ctrl = sdhci_read16(host, SDHCI_HOST_CTRL2);
+	ctrl |= SDHCI_EXECUTE_TUNING;
+	ctrl |= SDHCI_SIGNALING_EN;
+	sdhci_write16(host, SDHCI_HOST_CTRL2, ctrl);
+
+	sdhci_write32(host, SDHCI_INT_ENABLE, SDHCI_INT_DATA_AVAIL);
+	sdhci_write32(host, SDHCI_SIGNAL_ENABLE, SDHCI_INT_DATA_AVAIL);
+}
+
+static void sdhci_reset_tuning(struct sdhci *host)
+{
+	uint16_t ctrl;
+
+	ctrl = sdhci_read16(host, SDHCI_HOST_CTRL2);
+	ctrl &= ~SDHCI_CTRL_TUNED_CLK;
+	ctrl &= ~SDHCI_EXECUTE_TUNING;
+	sdhci_write16(host, SDHCI_HOST_CTRL2, ctrl);
+}
+
+static int sdhci_abort_tuning(struct sdhci *host)
+{
+	struct cmd tuning_cmd = {0};
+	struct cmd wait_cmd;
+	int ret;
+
+	sdhci_write32(host, SDHCI_INT_ENABLE, SDHCI_INT_DATA_AVAIL);
+	sdhci_write32(host, SDHCI_SIGNAL_ENABLE, SDHCI_INT_DATA_AVAIL);
+
+	memset(&tuning_cmd, 0, sizeof(tuning_cmd));
+	tuning_cmd.index = CMD_MMC_STOP_TRANSMISSION;
+	tuning_cmd.flags = MMC_RSP_SPI_R1B | MMC_RSP_R1B | MMC_CMD_AC;
+
+	tuning_cmd.flags |= CMDF_DATA_XFER | CMDF_USE_DMA;
+	tuning_cmd.flags |= CMDF_WR_XFER;
+
+	ret = mmc_send_cmd(&tuning_cmd);
+	if (ret)
+		return EFI_DEVICE_ERROR;
+
+	memset(&wait_cmd, 0, sizeof(wait_cmd));
+	wait_cmd.flags = CMDF_DATA_XFER;
+	ret = mmc_wait_cmd_done(&wait_cmd);
+
+	return EFI_SUCCESS;
+}
+
+static int sdhci_send_tuning(struct sdhci *host, uint32_t opcode)
+{
+	struct cmd tuning_cmd = {0};
+	uint32_t buf[256]={0};
+	int ret;
+
+	tuning_cmd.index = opcode;
+	tuning_cmd.args = 0;
+
+	tuning_cmd.flags = MMC_RSP_R1 | MMC_CMD_ADTC;
+
+	tuning_cmd.flags |= CMDF_RD_XFER;
+	tuning_cmd.resp_len = 32;
+
+	tuning_cmd.flags |= SDHCI_CMD_DATA_PRESENT;
+	tuning_cmd.flags |= TM_USE_DMA;
+	tuning_cmd.flags |= TM_BLOCK_CNT_ENABLE;
+	tuning_cmd.addr = (uintptr_t)buf;
+	tuning_cmd.retry = 0;
+
+	sdhci_write16(host, SDHCI_BLOCK_SIZE, SDHCI_MAKE_BLKSZ(7, 128));
+	sdhci_write16(host, SDHCI_TRANSFER_MODE, SDHCI_TRNS_READ );
+
+	ret = mmc_send_cmd(&tuning_cmd);
+	if (ret)
+		return EFI_DEVICE_ERROR;
+
+	sdhci_write16(host, SDHCI_TRANSFER_MODE, SDHCI_TRNS_READ );
+
+	uint64_t start = timer_us(0);
+	do
+	{
+		unsigned int intmask;
+		intmask = sdhci_read16(host, SDHCI_INT_STATUS);
+		if ((intmask & SDHCI_INT_DATA_AVAIL))
+		{
+			sdhci_write16(host, SDHCI_INT_STATUS, intmask & SDHCI_INT_DATA_AVAIL);
+			return EFI_SUCCESS;
+		}
+	} while (timer_us(start) < 10 * 1000);
+
+	return EFI_NOT_READY;
+}
+
+static int sdhci_execute_tuning(struct mmc *m)
+{
+	struct sdhci *host = m->host;
+	uint32_t ier1;
+	uint32_t ier2;
+	uint16_t ctrl = 0;
+	int counter;
+	int ret = 0;
+	int err = 0;
+
+	ier1 = sdhci_read32(host, SDHCI_INT_ENABLE);
+	ier2 = sdhci_read32(host, SDHCI_SIGNAL_ENABLE);
+
+	sdhci_start_tuning(host);
+
+	/*
+	 * Issue TUNING_CMD repeatedly till Execute Tuning is set to 0 or the number
+	 * of loops reaches 40 times.
+	 */
+	for(counter = 0; counter <= MAX_TUNING_LOOP; counter ++)
+	{
+		ret = sdhci_send_tuning(host, CMD_MMC_SEND_TUNING_BLOCK_HS200);
+		if (ret != EFI_SUCCESS)
+		{
+			sdhci_reset_tuning(host);
+			sdhci_reset(host, SDHCI_RESET_CMD);
+			sdhci_reset(host, SDHCI_RESET_DATA);
+			sdhci_abort_tuning(host);
+			break;
+		}
+
+		ctrl = sdhci_read16(host, SDHCI_HOST_CTRL2);
+		if ((ctrl & SDHCI_EXECUTE_TUNING) == 0)
+			break;
+	}
+
+	if (!(ctrl & SDHCI_CLOCK_TUNED))
+	{
+		err = EFI_DEVICE_ERROR;
+		printf("tuning failed, ctrl=0x%X\n", ctrl);
+	}
+
+	sdhci_write32(host, SDHCI_INT_ENABLE, ier1);
+	sdhci_write32(host, SDHCI_SIGNAL_ENABLE, ier2);
+
+	return err;
+}
+
+
 static void sdhci_reset(struct sdhci *host, uint8_t mask)
 {
         uint64_t start = timer_us(0);
@@ -238,12 +385,15 @@ sdhci_send_cmd(struct mmc *m, struct cmd *c)
 		udelay(10);
 	} while ((Timeout-- > 0) && (Data32 & SDHCI_CMD_INHIBIT));
 
-	Timeout = 90;
-	do
+	if(c->index != CMD_MMC_SEND_TUNING_BLOCK_HS200)
 	{
-		Data32 = sdhci_read16 (host, SDHCI_PRESENT_STATE);
-		mdelay(2);
-	} while ((Timeout-- > 0) && (Data32 & SDHCI_DATA_INHIBIT));
+		Timeout = 90;
+		do
+		{
+			Data32 = sdhci_read16 (host, SDHCI_PRESENT_STATE);
+			mdelay(2);
+		} while ((Timeout-- > 0) && (Data32 & SDHCI_DATA_INHIBIT));
+	}
 
 	/* clear irq_status/err_sts register */
 	sdhci_write32(host, SDHCI_INT_STATUS, 0xffffffff);
@@ -440,6 +590,7 @@ struct sdhci *sdhci_find_controller(pcidev_t dev)
 	host.wait_boot_done  = sdhci_wait_boot_done;
 	host.boot_stop       = sdhci_boot_stop;
 	host.set_mode        = sdhci_set_mode;
+	host.execute_tuning  = sdhci_execute_tuning;
 
 	addr = pci_read_config32(dev, PCI_BASE_ADDRESS_0);
         host.ioaddr = (addr & ~0xf);
