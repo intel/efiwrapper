@@ -358,7 +358,7 @@ sdhci_wait_cmd_done(struct mmc *m, struct cmd *c)
 		{
 			nis = sdhci_read16(host, SDHCI_INT_STATUS);
 
-			if (timer_us(start) > ms(4000))
+			if (timer_us(start) > ms(6000))
 			{
 				ewerr("CMD timeout");
 				goto exit;
