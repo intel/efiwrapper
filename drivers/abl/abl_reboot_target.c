@@ -35,9 +35,12 @@
 #include <libpayload.h>
 #include <ewvar.h>
 #include <ewlog.h>
+#include <efilib.h>
+#include "heci/heci_protocol.h"
 
 #define RTC_PORT(x)			(0x70 + (x))
-#define LOADER_ENTRY_ONESHOT    	L"LoaderEntryOneShot"
+#define LOADER_ENTRY_ONESHOT		L"LoaderEntryOneShot"
+#define IFWI_CAPSULE_UPDATE 		L"IfwiCapsuleUpdate"
 
 /* RTC read and write */
 static inline unsigned char cmos_read_ext_bank(u8 addr)
@@ -77,6 +80,13 @@ union _cdata_header {
 		unsigned tag	: 12;
 	};
 };
+
+struct nvram_capsule_cmd {
+	char action;
+	char device;
+	char partition;
+	char file_name[1];
+} __attribute__((__packed__));
 
 struct nvram_reboot_cmd {
 	char action;
@@ -173,6 +183,176 @@ static uint32_t crc32c_msg(struct nvram_msg *nvram_msg)
 	return crc;
 }
 
+enum capsule_device_type {
+	EMMC = 2,
+	SDCARD = 4
+};
+
+typedef union _MKHI_MESSAGE_HEADER {
+	uint32_t Data;
+	struct {
+		uint32_t  GroupId : 8;
+		uint32_t  Command : 7;
+		uint32_t  IsResponse : 1;
+		uint32_t  Reserved : 8;
+		uint32_t  Result : 8;
+	} Fields;
+} MKHI_MESSAGE_HEADER;
+
+/*
+ * User command  message
+ */
+#define CSE_USRCMD_SIZE			128 // <64 or ==64 will send fail
+typedef struct __attribute__( (packed) ) _HECI_USER_CMD_REQUEST
+{
+	MKHI_MESSAGE_HEADER  MKHIHeader;
+	uint8_t sub_command;
+	uint8_t data[CSE_USRCMD_SIZE];
+} HECI_USER_CMD_REQUEST;
+
+typedef struct _HECI_USER_CMD_RESPONSE {
+	MKHI_MESSAGE_HEADER Header;
+} HECI_USER_CMD_RESPONSE;
+
+#define MBP_APP_ABL_SIG         	0x20
+#define MBP_ITEM_ID_IAFW_IBB_SIG	0x7
+#define BIOS_FIXED_HOST_ADDR    	0
+static unsigned heci_send_user_command(uint8_t *data, uint8_t length)
+{
+	unsigned status;
+	uint32_t HeciSendLength;
+	uint32_t HeciRecvLength;
+	HECI_USER_CMD_REQUEST *SendCommand;
+	HECI_USER_CMD_RESPONSE *CommandResp;
+	EFI_GUID guid = HECI_PROTOCOL_GUID;
+	EFI_HECI_PROTOCOL *protocol = NULL;
+	uint32_t SeCMode;
+	uint8_t DataBuffer[sizeof(HECI_USER_CMD_REQUEST)];
+
+	if (length == 0) {
+		ewerr("No need Sending HeciSendUserCommandClear.");
+		return 1;
+	}
+	if (length > CSE_USRCMD_SIZE)
+		length = CSE_USRCMD_SIZE;
+
+	status = LibLocateProtocol(&guid, (void **)&protocol);
+	if (EFI_ERROR(status)) {
+		ewerr("Failed to get heciprotocol");
+		return 1;
+	}
+
+	status = uefi_call_wrapper(protocol->GetSeCMode, 1, &SeCMode);
+	if (EFI_ERROR(status) || (SeCMode != SEC_MODE_NORMAL)) {
+		ewerr("Failed to get hecisecmode");
+		return 1;
+	}
+	ewdbg("HECI sec_mode %X", SeCMode);
+
+	memset (DataBuffer, 0, sizeof(DataBuffer));
+	SendCommand= (HECI_USER_CMD_REQUEST*)DataBuffer;
+	SendCommand->MKHIHeader.Fields.GroupId = MBP_APP_ABL_SIG;
+	SendCommand->MKHIHeader.Fields.Command = MBP_ITEM_ID_IAFW_IBB_SIG;
+	SendCommand->sub_command = 1;
+	memcpy(SendCommand->data, data, length);
+
+	HeciSendLength = sizeof(HECI_USER_CMD_REQUEST);
+	HeciRecvLength = sizeof(HECI_USER_CMD_RESPONSE);
+	status = uefi_call_wrapper(protocol->SendwACK, 5, (UINT32 *)DataBuffer,
+							   HeciSendLength, &HeciRecvLength,
+							   BIOS_FIXED_HOST_ADDR, 0x7);
+	if (status != 0) {
+		ewerr("Heci send fail: %x", status);
+		return status;
+	}
+	ewdbg("uefi_call_wrapper(SendwACK) =  %d", status);
+
+	CommandResp = (HECI_USER_CMD_RESPONSE*)DataBuffer;
+	ewdbg( "Group    =%08x\n", CommandResp->Header.Fields.GroupId);
+	ewdbg( "Command  =%08x\n", CommandResp->Header.Fields.Command);
+	ewdbg( "IsRespone=%08x\n", CommandResp->Header.Fields.IsResponse);
+	ewdbg( "Result   =%08x\n", CommandResp->Header.Fields.Result);
+	if (CommandResp->Header.Fields.Result != 0) {
+		status = CommandResp->Header.Fields.Result;
+		ewerr("Send cmd fail: %x", status);
+	}
+
+	return status;
+}
+
+static EFI_STATUS write_msg_to_cse(struct nvram_msg *msg)
+{
+	uint8_t *msg_buf, *msg_buf_p, msg_slen;
+	unsigned status;
+
+	msg_buf = malloc(CSE_USRCMD_SIZE);
+	if (!msg_buf)
+		return EFI_OUT_OF_RESOURCES;
+	memset(msg_buf, 0, CSE_USRCMD_SIZE);
+	msg_buf_p = msg_buf;
+
+	msg_slen = offsetof(struct nvram_msg, cdata_payload);
+	msg_buf_p = (uint8_t *)memcpy(msg_buf_p, (uint8_t *)msg, msg_slen) + msg_slen;
+	msg_slen = msg->cdata_payload_size;
+	msg_buf_p = (uint8_t *)memcpy(msg_buf_p, msg->cdata_payload, msg_slen) + msg_slen;
+	msg_slen = sizeof(msg->crc);
+	memcpy(msg_buf_p, (uint8_t *)(&(msg->crc)), msg_slen);
+
+	status = heci_send_user_command(msg_buf, CSE_USRCMD_SIZE);
+
+	free(msg_buf);
+	return status;
+}
+
+static EFI_STATUS capsule_store(const char *buf)
+{
+	char name[32]; /* Length of capsule file name can't exceed 30. */
+	int name_len, partition;
+	enum capsule_device_type device;
+	struct nvram_msg msg;
+	struct nvram_capsule_cmd *capsule_cmd;
+	unsigned char capsule_cmd_size;
+	union _cdata_header cdh;
+	EFI_STATUS status = EFI_SUCCESS;
+
+	ewdbg("capsule buffer: %s", buf); /* Buffer format example: "m1:@0" */
+
+	device = (buf[0] == 'm' ? EMMC : SDCARD);
+	partition = buf[1] - '0';
+	memset(name, 0, sizeof(name));
+	strcpy(name, buf + 3); /* Number 3 is start index of name in buffer. */
+	name_len = strlen(name);
+	ewdbg("capsule parameters: DEVICE=%d PARTITION=%d NAME=%s",
+		  device, partition, name);
+
+	capsule_cmd_size = (offsetof(struct nvram_capsule_cmd, file_name) + name_len + 3) & ~3;
+
+	cdh.data = 0;
+	cdh.tag = CDATA_TAG_USER_CMD;
+	cdh.length = (sizeof(cdh) + capsule_cmd_size) / 4;
+
+	msg.magic = NVRAM_VALID_FLAG;
+	msg.size = offsetof(struct nvram_msg, cdata_payload) + capsule_cmd_size + sizeof(msg.crc);
+	msg.cdata_header.data = cdh.data;
+
+	capsule_cmd = malloc(capsule_cmd_size);
+	if (!capsule_cmd)
+		return EFI_OUT_OF_RESOURCES;
+
+	capsule_cmd->action = USERCMD_UPDATE_IFWI(name_len + 2);
+	capsule_cmd->device = device;
+	capsule_cmd->partition = partition;
+	strncpy(capsule_cmd->file_name, name, name_len);
+	msg.cdata_payload = (char *)capsule_cmd;
+	msg.cdata_payload_size = capsule_cmd_size;
+	msg.crc = crc32c_msg(&msg);
+
+	status = write_msg_to_cse(&msg);
+
+	free(capsule_cmd);
+	return status;
+}
+
 static EFI_STATUS reboot_target_name2id(const CHAR16 *name, int *id)
 {
 	size_t i;
@@ -206,6 +386,10 @@ static EFI_STATUS set_reboot_target(const CHAR16 *name)
 			__func__, (char*)name);
 		return EFI_INVALID_PARAMETER;
 	}
+	if (id == 0) {
+		ewdbg("Target 'boot' no need write to nvram.");
+		return EFI_SUCCESS;
+	}
 
 	cdh.data = 0;
 	cdh.length = 2; /* 2*32 bits, from header to padding */
@@ -237,10 +421,15 @@ static EFI_STATUS reboot_target_save(ewvar_t *var)
 		return EFI_INVALID_PARAMETER;
 
 	name = LOADER_ENTRY_ONESHOT;
-
 	if (str16len(var->name) == str16len(name) &&
 		!memcmp(var->name, name, str16len(name) * sizeof(*name))) {
 		return set_reboot_target(var->data);
+	}
+
+	name = IFWI_CAPSULE_UPDATE;
+	if (str16len(var->name) == str16len(name) &&
+		!memcmp(var->name, name, str16len(name) * sizeof(*name))) {
+		return capsule_store(var->data);
 	}
 
 	return EFI_SUCCESS;
