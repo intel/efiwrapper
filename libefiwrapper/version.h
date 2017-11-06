@@ -40,6 +40,6 @@
 #define BUILD_VARIANT           "-eng"
 #endif
 
-#define EFIWRAPPER_VERSION "efiwrapper-01.0A" BUILD_VARIANT
+#define EFIWRAPPER_VERSION "efiwrapper-01.0B" BUILD_VARIANT
 
 #endif	/* _VERSION_H_ */
