@@ -30,8 +30,13 @@
 #ifndef __HW_KABYLAKE__
 #define __HW_KABYLAKE__
 
+#define KBL_PCI_EXPRESS_BASE_ADDR           0xE0000000
+#define KBL_PCI_FUNCTION_NUMBER_PCH_SERIAL_IO_UART2   0
+
+#include "hw_pci_uart.h"
+
 /* serial port base address */
-#define SERIAL_BASEADDR  0x8175E000
+#define KBL_DEFAULT_UART_BASEADDR  0x8175E000
 
 /* PCI device id of OTG */
 #define XDCI_PID         0x9D30
@@ -39,6 +44,20 @@
 
 /* PCI device id of EMMC controller */
 #define EMMC_DEVICEID    0x9D2B
+
+
+#define SERIAL_BASEADDR  KblGetPciUartBase()
+
+static inline uint32_t KblGetPciUartBase(void)
+{
+    uint32_t base;
+
+    base = GetPciUartBase(KBL_PCI_EXPRESS_BASE_ADDR, KBL_PCI_FUNCTION_NUMBER_PCH_SERIAL_IO_UART2);
+    if (base == 0)
+        base = KBL_DEFAULT_UART_BASEADDR;
+
+    return base;
+}
 
 #endif /* __HW_KABYLAKE__ */
 

@@ -30,6 +30,9 @@
 #ifndef __HW_ICELAKE__
 #define __HW_ICELAKE__
 
+#define ICL_PCI_EXPRESS_BASE_ADDR           0xC0000000
+#define ICL_PCI_FUNCTION_NUMBER_PCH_SERIAL_IO_UART2   2
+
 #include "hw_pci_uart.h"
 
 /* serial port base address */
@@ -48,7 +51,7 @@ static inline uint32_t IclGetPciUartBase(void)
 {
     uint32_t base;
 
-    base = GetPciUartBase();
+    base = GetPciUartBase(ICL_PCI_EXPRESS_BASE_ADDR, ICL_PCI_FUNCTION_NUMBER_PCH_SERIAL_IO_UART2);
     if (base == 0)
         base = ICL_DEFAULT_UART_BASEADDR;
 
