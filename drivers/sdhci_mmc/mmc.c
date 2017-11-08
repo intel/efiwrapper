@@ -28,9 +28,16 @@
 #include <pci.h>
 #include <ewlog.h>
 
+#include <hwconfig.h>
+
 #include "sdhci_mmc/mmc.h"
 #include "sdhci_mmc/sdhci.h"
 #include "sdhci_mmc/sdhci-internal.h"
+
+
+#if defined (PLATFORM_KABYLAKE) || defined (PLATFORM_ICELAKE)
+#define NO_HS400
+#endif
 
 /*
 ** Global instance of the eMMC card
@@ -301,11 +308,13 @@ static int mmc_card_hs200(struct mmc *m)
 		&& (m->ext_csd[EXT_CSD_DEVICE_TYPE] & CARD_TYPE_HS200));
 }
 
+#ifndef NO_HS400
 static int mmc_card_hs400(struct mmc *m)
 {
 	return ((m->host->caps2 & SDHCI_SUPPORT_HS400)
 		&& (m->ext_csd[EXT_CSD_DEVICE_TYPE] & CARD_TYPE_HS400));
 }
+#endif
 
 int mmc_enable_hs200(struct mmc *m)
 {
@@ -333,6 +342,7 @@ int mmc_enable_hs200(struct mmc *m)
 	return 0;
 }
 
+#ifndef NO_HS400
 /*
 ** Select HS400 mode - see JEDEC84-B51 standard
 ** Mode selection assumes HS400 is already enabled
@@ -394,6 +404,7 @@ int mmc_enable_hs400(struct mmc *m)
 
 	return err;
 }
+#endif
 
 /*
 ** Main function for initializing SD/eMMC card.
@@ -463,6 +474,7 @@ int mmc_init_card(pcidev_t dev)
 		if(host->execute_tuning != NULL)
 			host->execute_tuning(m);
 
+#ifndef NO_HS400
 		if (mmc_card_hs400(m)) {
 			err = mmc_enable_hs400(m);
 			if (err) {
@@ -471,6 +483,7 @@ int mmc_init_card(pcidev_t dev)
 			}
 			ewdbg("MMC host hs400 enabled");
 		} else
+#endif
 			ewdbg("MMC host hs200 enabled");
 	}
 	else {
