@@ -33,13 +33,11 @@
 #include <stdint.h>
 #include <arch/io.h>
 
-#define PCI_EXPRESS_BASE_ADDR           0xC0000000
 #define PCI_COMMAND_OFFSET              0x04
 #define EFI_PCI_COMMAND_MEMORY_SPACE    (1<<1)
 
 #define DEFAULT_PCI_BUS_NUMBER_PCH                0
 #define PCI_DEVICE_NUMBER_PCH_SERIAL_IO_UART2     25
-#define PCI_FUNCTION_NUMBER_PCH_SERIAL_IO_UART2   2
 #define R_PCH_SERIAL_IO_BAR0_LOW                  0x10
 #define B_PCH_SERIAL_IO_BAR0_LOW_BAR              0xFFFFF000
 
@@ -47,7 +45,7 @@
    (((Register) & 0xfff) | (((Function) & 0x07) << 12) | (((Device) & 0x1f) << 15) | (((Bus) & 0xff) << 20))
 
 
-static inline uint32_t GetPciUartBase (void)
+static inline uint32_t GetPciUartBase (uint32_t PciBaseAddr, uint32_t UartNo)
 {
     uint32_t  PciUartBase = 0;
     uint32_t  PciUartMmBase;
@@ -56,10 +54,10 @@ static inline uint32_t GetPciUartBase (void)
     PciUartMmBase = PCI_LIB_ADDRESS (
                         DEFAULT_PCI_BUS_NUMBER_PCH,
                         PCI_DEVICE_NUMBER_PCH_SERIAL_IO_UART2,
-                        PCI_FUNCTION_NUMBER_PCH_SERIAL_IO_UART2,
+                        UartNo,
                         0);
 
-    PciUartMmBase += PCI_EXPRESS_BASE_ADDR;
+    PciUartMmBase += PciBaseAddr;
     Cmd16 = read16((void *)(PciUartMmBase + PCI_COMMAND_OFFSET));
     if (Cmd16 != 0xFFFF) {
         if (read8((void *)(PciUartMmBase + PCI_COMMAND_OFFSET)) & EFI_PCI_COMMAND_MEMORY_SPACE)
