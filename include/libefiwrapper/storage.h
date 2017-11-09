@@ -48,8 +48,26 @@ typedef struct storage {
 	void *priv;
 } storage_t;
 
+enum storage_type {
+	STORAGE_EMMC,
+	STORAGE_UFS,
+	STORAGE_SDCARD,
+	STORAGE_SATA,
+	STORAGE_NVME,
+	STORAGE_ALL
+};
+
+typedef struct boot_dev {
+	enum storage_type type;
+	UINT32 diskbus;
+} boot_dev_t;
+
 EFI_STATUS storage_init(EFI_SYSTEM_TABLE *st, storage_t *storage,
 			EFI_HANDLE *handle_p);
 EFI_STATUS storage_free(EFI_SYSTEM_TABLE *st, EFI_HANDLE handle);
+
+EFI_STATUS identify_boot_media();
+
+boot_dev_t* get_boot_media();
 
 #endif	/* _STORAGE_H_ */
