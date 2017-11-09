@@ -39,6 +39,7 @@
 #include "rs.h"
 #include "serialio.h"
 #include "smbios.h"
+#include "storage.h"
 
 static EFI_GUID image_guid = LOADED_IMAGE_PROTOCOL;
 static EFI_BOOT_SERVICES bs;
@@ -143,6 +144,10 @@ EFI_STATUS efiwrapper_init(int argc, char **argv, EFI_SYSTEM_TABLE **st_p,
 		goto err_load_options;
 
 	ret = ewarg_init(argc, argv);
+	if (EFI_ERROR(ret))
+		goto err_load_options;
+
+	ret = identify_boot_media();
 	if (EFI_ERROR(ret))
 		goto err_load_options;
 

@@ -57,6 +57,7 @@ void *malloc(size_t size);
 void free(void *ptr);
 void *calloc(size_t nmemb, size_t size);
 void *realloc(void *ptr, size_t size);
+long int strtol(const char *s, char **nptr, int base);
 
 /* string.h */
 int memcmp(const void *s1, const void *s2, size_t n);

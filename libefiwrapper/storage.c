@@ -36,11 +36,20 @@
 #include "media.h"
 #include "interface.h"
 #include "ewlog.h"
+#include "ewarg.h"
 
 #include <efilib.h>
 #include <storage.h>
 
 static EFI_GUID dp_guid = DEVICE_PATH_PROTOCOL;
+
+#define ABL_BDEV "ABL.bdev"
+#define ABL_DISKBUS "ABL.diskbus"
+
+static boot_dev_t boot_dev = {
+	.type = STORAGE_EMMC,
+	.diskbus = 0xFFFF
+};
 
 /* Device path  */
 struct storage_dp {
@@ -160,3 +169,36 @@ EFI_STATUS storage_free(EFI_SYSTEM_TABLE *st, EFI_HANDLE handle)
 
 	return EFI_SUCCESS;
 }
+
+EFI_STATUS identify_boot_media()
+{
+	const char *val;
+	size_t len;
+
+	val = ewarg_getval(ABL_BDEV);
+	if (!val)
+		return EFI_SUCCESS;
+
+	len = strlen(val);
+	if (!strncmp(val, "MMC", len))
+		boot_dev.type = STORAGE_EMMC;
+	else if (!strncmp(val, "UFS", len))
+		boot_dev.type = STORAGE_UFS;
+	else if (!strncmp(val, "NVME", len))
+		boot_dev.type = STORAGE_NVME;
+
+	val = ewarg_getval(ABL_DISKBUS);
+	if (!val)
+		return EFI_SUCCESS;
+
+	boot_dev.diskbus = (UINT32)strtol(val, NULL, 16);
+
+	return EFI_SUCCESS;
+}
+
+boot_dev_t* get_boot_media()
+{
+	return &boot_dev;
+}
+
+
