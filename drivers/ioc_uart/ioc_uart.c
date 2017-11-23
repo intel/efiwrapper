@@ -40,6 +40,7 @@
 #include "ioc_uart/ioc_uart_protocol.h"
 #include "ewlog.h"
 
+#ifndef IOC_USE_CBC  //default to use SLCAN
 #define CAN_STACK_READY				"T0000FFFF70A005555555555\r"
 #define CAN_SUPPRES_HEART_BEAT_1MIN		"T0000FFFF701015555555555\r"
 #define CAN_SUPPRES_HEART_BEAT_5MIN		"T0000FFFF701025555555555\r"
@@ -52,6 +53,24 @@
 #define CAN_NUMBER_SUS_STAT_TOGGLES_1		"T0000FFFF705015555555555\r"
 #define CAN_ENTER_IOC_BOOTLOADER		"T0000FFFF7FFAF5555555555\r"
 #define CAN_MSG_LENGTH   			25
+#else  //CBC frames
+static char CBC_SUPPRES_HEART_BEAT_1MIN[]	=	{0x05,0x00,0x0E,0x04,0x60,0xEA,0x00,0x9F};
+static char CBC_SUPPRES_HEART_BEAT_5MIN[]	=	{0x05,0x00,0x0E,0x04,0xE0,0x93,0x04,0x72};
+static char CBC_SUPPRES_HEART_BEAT_10MIN[]	=	{0x05,0x00,0x0E,0x04,0xC0,0x27,0x09,0xF9};
+static char CBC_SUPPRES_HEART_BEAT_30MIN[]	=	{0x05,0x00,0x0E,0x04,0x40,0x77,0x1B,0x17};
+static char CBC_NUMBER_SUS_STAT_TOGGLES_2_HALT[]	=	{0x05,0x00,0x0E,0x02,0x00,0x05,0x00,0xE6};
+static char CBC_NUMBER_SUS_STAT_TOGGLES_1_HALT[]	=	{0x05,0x00,0x0E,0x02,0x00,0x03,0x00,0xE8};
+static char CBC_NUMBER_SUS_STAT_TOGGLES_2_REBOOT[]	=	{0x05,0x00,0x0E,0x02,0x00,0x06,0x00,0xE5};
+static char CBC_NUMBER_SUS_STAT_TOGGLES_1_REBOOT[]	=	{0x05,0x00,0x0E,0x02,0x00,0x04,0x00,0xE7};
+//static char CBC_CONFIG_RESTART_SYSTEM[]	=	{0x05,0x00,0x0E,0x02,0x00,0x02,0x00,0xE9};
+//static char CBC_CONFIG_SHUTDOWN_SYSTEM[]	=	{0x05,0x00,0x0E,0x02,0x00,0x01,0x00,0xEA};
+static char CBC_ENTER_IOC_BOOTLOADER[]	=	{0x05,0x00,0x20,0x01,0x30,0x10,0x80,0x1a,
+						 0x05,0x00,0x20,0x01,0x30,0x10,0x80,0x11,
+						 0x05,0x00,0x20,0x01,0x30,0x10,0x80,0x1a,
+						 0x05,0x00,0x20,0x01,0x30,0x10,0x80,0x11};
+#define CBC_ENTER_IOC_BOOTLOADER_MSG_NUM	4
+#define CBC_MSG_LENGTH				8
+#endif
 
 #define SUPPRESS_HEART_BEAT_TIMEOUT_1_MIN	1
 #define SUPPRESS_HEART_BEAT_TIMEOUT_5_MIN	5
@@ -101,7 +120,11 @@
 
 static UINTN uart_base_addr;
 static unsigned int old_state[7];
+#ifndef IOC_USE_CBC
 static char can_message_buf[CAN_MSG_LENGTH + 1];
+#else
+static char * cbc_message_buf = NULL;
+#endif
 uint8_t frame_number_send, frame_number_received = 0;
 
 union _pci_config_space {
@@ -329,6 +352,7 @@ set_suppress_heart_beat_timeout(__attribute__((__unused__)) IOC_UART_PROTOCOL *T
 		 UINT32 timeout)
 {
 	init_uart_ioc(old_state);
+#ifndef IOC_USE_CBC
 	switch (timeout) {
 		case SUPPRESS_HEART_BEAT_TIMEOUT_1_MIN:
 			strncpy((char *)can_message_buf, (char *)CAN_SUPPRES_HEART_BEAT_1MIN, CAN_MSG_LENGTH);
@@ -346,11 +370,29 @@ set_suppress_heart_beat_timeout(__attribute__((__unused__)) IOC_UART_PROTOCOL *T
 	}
 
 	ioc_uart_send_data(can_message_buf, CAN_MSG_LENGTH);
+#else
+	switch (timeout) {
+		case SUPPRESS_HEART_BEAT_TIMEOUT_1_MIN:
+			cbc_message_buf = CBC_SUPPRES_HEART_BEAT_1MIN;
+			break;
+		case SUPPRESS_HEART_BEAT_TIMEOUT_5_MIN:
+			cbc_message_buf = CBC_SUPPRES_HEART_BEAT_5MIN;
+			break;
+		case SUPPRESS_HEART_BEAT_TIMEOUT_10_MIN:
+			cbc_message_buf = CBC_SUPPRES_HEART_BEAT_10MIN;
+			break;
+		case SUPPRESS_HEART_BEAT_TIMEOUT_30_MIN:
+		default:
+			cbc_message_buf = CBC_SUPPRES_HEART_BEAT_30MIN;
+			break;
+	}
+	ioc_uart_send_data(cbc_message_buf, CBC_MSG_LENGTH);
+#endif
 	ioc_uart_restore_device(old_state);
 
 	return EFI_SUCCESS;
 }
-
+#ifndef IOC_USE_CBC
 static EFIAPI EFI_STATUS
 set_shutdown_behaviour(EFI_CONFIGURE_SHUTDOWN_BEHAVIOUR shutdown)
 {
@@ -395,15 +437,48 @@ set_ignore_sus_stat_toggles(EFI_IGNORE_SUS_STAT_TOGGLES num_ignore_sus_stat)
 
 	return EFI_SUCCESS;
 }
+#else
+static EFIAPI EFI_STATUS
+set_ignore_sus_stat_toggles_shutdown_behaviour(EFI_IGNORE_SUS_STAT_TOGGLES num_ignore_sus_stat,EFI_CONFIGURE_SHUTDOWN_BEHAVIOUR shutdown)
+{
+	init_uart_ioc(old_state);
+	switch (shutdown) {
+		case RESTART_SYSTEM:
+			if(IGNORE_SUS_STAT_2==num_ignore_sus_stat)
+				cbc_message_buf = CBC_NUMBER_SUS_STAT_TOGGLES_2_REBOOT;
+			else
+				cbc_message_buf = CBC_NUMBER_SUS_STAT_TOGGLES_1_REBOOT;
+			break;
+		case SHUTDOWN_SYSTEM:
+		default:
+			if(IGNORE_SUS_STAT_2==num_ignore_sus_stat)
+				cbc_message_buf = CBC_NUMBER_SUS_STAT_TOGGLES_2_HALT;
+			else
+				cbc_message_buf = CBC_NUMBER_SUS_STAT_TOGGLES_1_HALT;
+			break;
+	}
+
+	ioc_uart_send_data(cbc_message_buf, CBC_MSG_LENGTH);
+	ioc_uart_restore_device(old_state);
+
+	return EFI_SUCCESS;
+}
+#endif
 
 static EFIAPI EFI_STATUS
 notify_ioc_cm_ready(__attribute__((__unused__)) IOC_UART_PROTOCOL *This)
 {
 	init_uart_ioc(old_state);
+#ifndef IOC_USE_CBC
 	strncpy((char *)can_message_buf, (char *)CAN_STACK_READY, CAN_MSG_LENGTH);
 	ioc_uart_send_data(can_message_buf, CAN_MSG_LENGTH);
 	strncpy((char *)can_message_buf, (char *)CAN_NUMBER_SUS_STAT_TOGGLES_3, CAN_MSG_LENGTH);
 	ioc_uart_send_data(can_message_buf, CAN_MSG_LENGTH);
+#else
+#ifdef DEBUG
+	printf("CBC Kmod-no handshake required\n");
+#endif
+#endif
 	ioc_uart_restore_device(old_state);
 
 	return EFI_SUCCESS;
@@ -432,14 +507,16 @@ ioc_reboot(EFI_RESET_TYPE ResetType, CHAR16 *ResetData)
 		numberignoretoggles = IGNORE_SUS_STAT_2;
 	else
 		numberignoretoggles = IGNORE_SUS_STAT_1;
-
+#ifndef IOC_USE_CBC
 	ret = set_ignore_sus_stat_toggles(numberignoretoggles);
 	if (EFI_ERROR(ret)) {
 		return ret;
 	}
 
 	ret = set_shutdown_behaviour(RESTART_SYSTEM);
-
+#else
+	ret = set_ignore_sus_stat_toggles_shutdown_behaviour(numberignoretoggles,RESTART_SYSTEM);
+#endif
 	return ret;
 }
 
@@ -721,10 +798,19 @@ void ias_ioc_reset(void)
 
 static ias_flash_result ias_flash_enter_fbl_mode(ias_hardware_revision *hardware_revision)
 {
+#ifndef IOC_USE_CBC
 	printf("Restarting the IOC into the bootloader (slcan request)\n");
 	strncpy((char *)can_message_buf, (char *)CAN_ENTER_IOC_BOOTLOADER, CAN_MSG_LENGTH);
 	ioc_uart_send_data(can_message_buf, CAN_MSG_LENGTH);
-
+#else
+	unsigned int to;
+	printf("Restarting the IOC into the bootloader (CBC request)\n");
+	cbc_message_buf = CBC_ENTER_IOC_BOOTLOADER;
+	ioc_uart_send_data(cbc_message_buf, CBC_MSG_LENGTH*CBC_ENTER_IOC_BOOTLOADER_MSG_NUM);
+	to = TIMER_START(5);
+	while (!TIMER_ELAPSED(to))
+		;
+#endif
 	return ias_ioc_handshake(hardware_revision);
 }
 
