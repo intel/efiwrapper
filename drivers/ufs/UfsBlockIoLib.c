@@ -957,6 +957,238 @@ UfsReadBlocks(
 	return Status;
 }
 
+/**
+  Execute WRITE (10) SCSI command on a specific UFS device.
+
+  @param[in]  Private              A pointer to UFS_PEIM_HC_PRIVATE_DATA data structure.
+  @param[in]  Lun                  The lun on which the SCSI cmd executed.
+  @param[in]  StartLba             The start LBA.
+  @param[in]  SectorNum            The sector number to be written.
+  @param[out] DataBuffer           A pointer to data buffer.
+  @param[out] DataLength           The length of output data.
+  @param[out] SenseData            A pointer to output sense data.
+  @param[out] SenseDataLength      The length of output sense data.
+
+  @retval EFI_SUCCESS              The command executed successfully.
+  @retval EFI_DEVICE_ERROR         A device error occurred while attempting to send SCSI Request Packet.
+  @retval EFI_TIMEOUT              A timeout occurred while waiting for the SCSI Request Packet to execute.
+
+**/
+EFI_STATUS
+UfsWrite10(
+	IN  UFS_PEIM_HC_PRIVATE_DATA     *Private,
+	IN  UINTN                        Lun,
+	IN  UINTN                        StartLba,
+	IN  UINT32                       SectorNum,
+	OUT VOID                         *DataBuffer,
+	OUT UINT32                       *DataLength,
+	OUT VOID                         *SenseData, OPTIONAL
+	OUT UINT8                        *SenseDataLength
+)
+{
+	UFS_SCSI_REQUEST_PACKET             Packet;
+	UINT8                               Cdb[UFS_SCSI_OP_LENGTH_TEN];
+	EFI_STATUS                          Status;
+
+	ZeroMem(&Packet, sizeof (UFS_SCSI_REQUEST_PACKET));
+	ZeroMem(Cdb, sizeof (Cdb));
+
+	Cdb[0] = EFI_SCSI_OP_WRITE10;
+	WriteUnaligned32((UINT32 *)&Cdb[2], SwapBytes32((UINT32)StartLba));
+	WriteUnaligned16((UINT16 *)&Cdb[7], SwapBytes16((UINT16)SectorNum));
+
+	Packet.Timeout = UFS_TIMEOUT;
+	Packet.Cdb = Cdb;
+	Packet.CdbLength = sizeof (Cdb);
+	Packet.OutDataBuffer = DataBuffer;
+	Packet.OutTransferLength = *DataLength;
+	Packet.DataDirection = UfsDataOut;
+	Packet.SenseData = SenseData;
+	Packet.SenseDataLength = *SenseDataLength;
+
+	Status = UfsExecScsiCmds(Private, (UINT8)Lun, &Packet);
+
+	if (*SenseDataLength != 0)
+		*SenseDataLength = Packet.SenseDataLength;
+
+	if (!EFI_ERROR(Status))
+		*DataLength = Packet.OutTransferLength;
+
+	return Status;
+}
+
+/**
+  Execute WRITE (16) SCSI command on a specific UFS device.
+
+  @param[in]  Private              A pointer to UFS_PEIM_HC_PRIVATE_DATA data structure.
+  @param[in]  Lun                  The lun on which the SCSI cmd executed.
+  @param[in]  StartLba             The start LBA.
+  @param[in]  SectorNum            The sector number to be written.
+  @param[out] DataBuffer           A pointer to data buffer.
+  @param[out] DataLength           The length of output data.
+  @param[out] SenseData            A pointer to output sense data.
+  @param[out] SenseDataLength      The length of output sense data.
+
+  @retval EFI_SUCCESS              The command executed successfully.
+  @retval EFI_DEVICE_ERROR         A device error occurred while attempting to send SCSI Request Packet.
+  @retval EFI_TIMEOUT              A timeout occurred while waiting for the SCSI Request Packet to execute.
+
+**/
+EFI_STATUS
+UfsWrite16(
+	IN  UFS_PEIM_HC_PRIVATE_DATA     *Private,
+	IN  UINTN                        Lun,
+	IN  UINTN                        StartLba,
+	IN  UINT32                       SectorNum,
+	OUT VOID                         *DataBuffer,
+	OUT UINT32                       *DataLength,
+	OUT VOID                         *SenseData, OPTIONAL
+	OUT UINT8                        *SenseDataLength
+)
+{
+	UFS_SCSI_REQUEST_PACKET             Packet;
+	UINT8                               Cdb[UFS_SCSI_OP_LENGTH_SIXTEEN];
+	EFI_STATUS                          Status;
+
+	ZeroMem(&Packet, sizeof (UFS_SCSI_REQUEST_PACKET));
+	ZeroMem(Cdb, sizeof (Cdb));
+
+	Cdb[0] = EFI_SCSI_OP_WRITE16;
+	WriteUnaligned64((UINT64 *)&Cdb[2], SwapBytes64(StartLba));
+	WriteUnaligned32((UINT32 *)&Cdb[10], SwapBytes32(SectorNum));
+
+	Packet.Timeout = UFS_TIMEOUT;
+	Packet.Cdb = Cdb;
+	Packet.CdbLength = sizeof (Cdb);
+	Packet.OutDataBuffer = DataBuffer;
+	Packet.OutTransferLength = *DataLength;
+	Packet.DataDirection = UfsDataOut;
+	Packet.SenseData = SenseData;
+	Packet.SenseDataLength = *SenseDataLength;
+
+	Status = UfsExecScsiCmds(Private, (UINT8)Lun, &Packet);
+
+	if (*SenseDataLength != 0)
+		*SenseDataLength = Packet.SenseDataLength;
+
+	if (!EFI_ERROR(Status))
+		*DataLength = Packet.OutTransferLength;
+
+	return Status;
+}
+
+/**
+  This function writes data from Memory to UFS
+
+  @param[in]  DeviceIndex   Specifies the block device to which the function wants
+                            to talk.
+  @param[in]  StartBlock    Target UFS block number(LBA) where data will be written
+  @param[in]  DataSize      Total data size to be written in bytes unit
+  @param[out] DataAddress   Data address in Memory to be copied to UFS
+
+  @retval EFI_SUCCESS       The operation is done correctly.
+  @retval Others            The operation fails.
+
+**/
+EFI_STATUS
+EFIAPI
+UfsWriteBlocks(
+	IN  UINTN                          DeviceIndex,
+	IN  EFI_LBA                    StartLBA,
+	IN  UINTN                          BufferSize,
+	OUT VOID                           *Buffer
+)
+{
+	EFI_STATUS                         Status;
+	UINTN                              BlockSize;
+	UINTN                              NumberOfBlocks;
+	UFS_PEIM_HC_PRIVATE_DATA           *Private;
+	EFI_SCSI_SENSE_DATA                SenseData;
+	UINT8                              SenseDataLength;
+	BOOLEAN                            NeedRetry;
+
+	DEBUG((DEBUG_INFO, "UfsWriteBlocks. DeviceIndex = %x\n", DeviceIndex));
+
+	Private = UfsGetPrivateData();
+	if (Private == NULL)
+		return EFI_NOT_FOUND;
+
+	Status = EFI_SUCCESS;
+	NeedRetry = TRUE;
+
+	ZeroMem(&SenseData, sizeof (SenseData));
+	SenseDataLength = sizeof (SenseData);
+
+	//
+	// Check parameters
+	//
+	if (Buffer == NULL)
+		return EFI_INVALID_PARAMETER;
+
+	if (BufferSize == 0)
+		return EFI_SUCCESS;
+
+	if (DeviceIndex >= UFS_PEIM_MAX_LUNS)
+		return EFI_INVALID_PARAMETER;
+
+	if ((Private->Luns.BitMask & (BIT0 << DeviceIndex)) == 0)
+		return EFI_ACCESS_DENIED;
+
+	BlockSize = Private->Media[DeviceIndex].BlockSize;
+
+	if (BufferSize % BlockSize != 0)
+		Status = EFI_BAD_BUFFER_SIZE;
+
+	if (StartLBA > Private->Media[DeviceIndex].LastBlock)
+		Status = EFI_INVALID_PARAMETER;
+
+	NumberOfBlocks = BufferSize / BlockSize;
+
+	do {
+		Status = UfsTestUnitReady(
+			Private,
+			DeviceIndex,
+			&SenseData,
+			&SenseDataLength
+	  	);
+	if (!EFI_ERROR(Status))
+		break;
+
+	if (SenseDataLength == 0)
+		continue;
+
+	Status = UfsParsingSenseKeys(&(Private->Media[DeviceIndex]), &SenseData, &NeedRetry);
+	if (EFI_ERROR(Status))
+		return EFI_DEVICE_ERROR;
+
+	} while (NeedRetry);
+
+	SenseDataLength = 0;
+	if (Private->Media[DeviceIndex].LastBlock < 0xfffffffful)
+		Status = UfsWrite10(
+			Private,
+			DeviceIndex,
+			(UINT32)StartLBA,
+			(UINT32)NumberOfBlocks,
+			Buffer,
+			(UINT32 *)&BufferSize,
+			NULL,
+			&SenseDataLength
+		);
+	else
+		Status = UfsWrite16(
+			Private,
+			DeviceIndex,
+			 (UINT32)StartLBA,
+			(UINT32)NumberOfBlocks,
+			Buffer,
+			(UINT32 *)&BufferSize,
+			NULL,
+			&SenseDataLength
+		);
+
+	return Status;
+}
 
 /**
   Gets a block device's media information.

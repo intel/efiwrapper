@@ -88,12 +88,19 @@ static EFI_LBA _read(storage_t *s, EFI_LBA start, EFI_LBA count, void *buf)
 }
 
  /* Need to implement it in ufs driver*/
-static EFI_LBA _write(__attribute__((__unused__)) storage_t *s,
-	__attribute__((__unused__)) EFI_LBA start,
-	__attribute__((__unused__)) EFI_LBA count,
-	__attribute__((__unused__)) const void *buf)
+static EFI_LBA _write(storage_t *s, EFI_LBA start, EFI_LBA count, const void *buf)
 {
-	return 0;
+	EFI_STATUS ret;
+
+	ret = UfsWriteBlocks (
+		DEVICE_INDEX_DEFAULT,
+		start,
+		s->blk_sz * count,
+		(void *)buf);
+	if (!EFI_ERROR(ret))
+		return count;
+	else
+		return 0;
 }
 
 static storage_t storage_ufs_storage = {

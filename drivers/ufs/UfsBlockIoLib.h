@@ -60,6 +60,28 @@ UfsReadBlocks(
 	);
 
 /**
+  This function writes data from Memory to UFS
+
+  @param[in]  DeviceIndex   Specifies the block device to which the function wants
+                            to talk.
+  @param[in]  StartBlock    Target UFS block number(LBA) where data will be written
+  @param[in]  DataSize      Total data size to be written in bytes unit
+  @param[out] DataAddress   Data address in Memory to be copied to UFS
+
+  @retval EFI_SUCCESS       The operation is done correctly.
+  @retval Others            The operation fails.
+
+**/
+EFI_STATUS
+EFIAPI
+UfsWriteBlocks(
+	IN  UINTN                          DeviceIndex,
+	IN  EFI_LBA                    StartLBA,
+	IN  UINTN                          BufferSize,
+	OUT VOID                           *Buffer
+);
+
+/**
   Gets a block device's media information.
 
   This function will provide the caller with the specified block device's media
