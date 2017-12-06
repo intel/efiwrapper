@@ -30,13 +30,7 @@
 #ifndef __HW_ICELAKE__
 #define __HW_ICELAKE__
 
-#define ICL_PCI_EXPRESS_BASE_ADDR           0xC0000000
-#define ICL_PCI_FUNCTION_NUMBER_PCH_SERIAL_IO_UART2   2
-
 #include "hw_pci_uart.h"
-
-/* serial port base address */
-#define ICL_DEFAULT_UART_BASEADDR  0x8334D000
 
 /* PCI device id of OTG */
 #define XDCI_PID         0x9D30
@@ -45,8 +39,14 @@
 /* PCI device id of EMMC controller */
 #define EMMC_DEVICEID    0x34C4
 
-#define SERIAL_BASEADDR  IclGetPciUartBase()
+/* UFS */
+#define UFS_PCI_DID    0x34FA
 
+/* serial port base address */
+#ifndef EFIWRAPPER_USE_EC_UART
+#define ICL_PCI_EXPRESS_BASE_ADDR                     0xC0000000
+#define ICL_PCI_FUNCTION_NUMBER_PCH_SERIAL_IO_UART2   2
+#define ICL_DEFAULT_UART_BASEADDR                     0x8334D000
 static inline uint32_t IclGetPciUartBase(void)
 {
     uint32_t base;
@@ -58,8 +58,17 @@ static inline uint32_t IclGetPciUartBase(void)
     return base;
 }
 
-/* UFS */
-#define UFS_PCI_DID    0x34FA
+#define SERIAL_BASEADDR  IclGetPciUartBase()
+#define HW_SERIAL_TYPE        CB_SERIAL_TYPE_MEMORY_MAPPED
+#define HW_SERIAL_REG_WIDTH   4
+
+#else /* EFIWRAPPER_USE_EC_UART */
+
+#define SERIAL_BASEADDR       0x3f8
+#define HW_SERIAL_TYPE        CB_SERIAL_TYPE_IO_MAPPED
+#define HW_SERIAL_REG_WIDTH   1
+
+#endif /* EFIWRAPPER_USE_EC_UART */
 
 #endif /* __HW_ICELAKE__ */
 
