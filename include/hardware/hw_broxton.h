@@ -30,9 +30,6 @@
 #ifndef __HW_BROXTON__
 #define __HW_BROXTON__
 
-/* serial port base address */
-#define SERIAL_BASEADDR    0xfc000000
-
 /* PCI device id of OTG */
 #define XDCI_PID           0x5aaa
 #define XHCI_PID           0x5aa8
@@ -41,6 +38,11 @@
 #define EMMC_DEVICEID      0x5acc
 /* UFS is not enabled on BXT, hence set it as default value*/
 #define UFS_PCI_DID    0x0000
+
+/* serial port base address */
+#define SERIAL_BASEADDR       0xfc000000
+#define HW_SERIAL_TYPE        CB_SERIAL_TYPE_MEMORY_MAPPED
+#define HW_SERIAL_REG_WIDTH   4
 
 #endif /* __HW_BROXTON__ */
 

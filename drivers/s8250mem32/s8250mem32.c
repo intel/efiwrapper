@@ -40,10 +40,10 @@ static EFI_STATUS s8250mem32_init(__attribute__((__unused__)) EFI_SYSTEM_TABLE *
 {
 	static struct cb_serial s;
 
-	s.type = CB_SERIAL_TYPE_MEMORY_MAPPED;
 	s.baseaddr = SERIAL_BASEADDR;
+	s.regwidth = HW_SERIAL_REG_WIDTH;
+	s.type = HW_SERIAL_TYPE;
 
-	s.regwidth = 4;
 	lib_sysinfo.serial = &s;
 
 	serial_console_init();
