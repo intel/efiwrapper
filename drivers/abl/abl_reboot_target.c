@@ -320,7 +320,7 @@ static EFI_STATUS capsule_store(const char *buf)
 	device = (buf[0] == 'm' ? EMMC : SDCARD);
 	partition = buf[1] - '0';
 	memset(name, 0, sizeof(name));
-	strcpy(name, buf + 3); /* Number 3 is start index of name in buffer. */
+	strncpy(name, buf + 3, sizeof(name) - 1); /* Number 3 is start index of name in buffer. */
 	name_len = strlen(name);
 	ewdbg("capsule parameters: DEVICE=%d PARTITION=%d NAME=%s",
 		  device, partition, name);
