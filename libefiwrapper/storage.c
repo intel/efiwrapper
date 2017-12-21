@@ -52,7 +52,7 @@ static EFI_GUID dp_guid = DEVICE_PATH_PROTOCOL;
 
 static boot_dev_t boot_dev = {
 	.type = STORAGE_EMMC,
-	.diskbus = 0xFFFF
+	.diskbus = 0
 };
 
 /* Device path  */
