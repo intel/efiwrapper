@@ -146,6 +146,9 @@ static EFI_STATUS storage_ufs_init(EFI_SYSTEM_TABLE *st)
 	if (boot_dev->type != STORAGE_UFS)
 		return EFI_SUCCESS;
 
+	storage_ufs_storage.pci_device = (boot_dev->diskbus >> 8) & 0xff;
+	storage_ufs_storage.pci_function = boot_dev->diskbus & 0xff;
+
 	ret = storage_init(st, &storage_ufs_storage, &handle);
 	if (EFI_ERROR(ret))
 		return ret;
