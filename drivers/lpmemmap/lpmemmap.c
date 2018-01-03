@@ -36,6 +36,7 @@
 #include <ewlog.h>
 
 #include "lpmemmap/lpmemmap.h"
+#include <efilib.h>
 
 static UINTN efimemmap_nb;
 static EFI_MEMORY_DESCRIPTOR *efimemmap;
@@ -45,6 +46,7 @@ static EFI_MEMORY_DESCRIPTOR *efimemmap;
 #define E820_ACPI         3
 #define E820_NVS          4
 #define E820_UNUSABLE     5
+#define EFI_MAX_ADDRESS ((UINTN)~0)
 
 static EFI_STATUS e820_to_efi(unsigned int e820, UINT32 *efi)
 {
@@ -250,6 +252,137 @@ get_memory_map(UINTN *MemoryMapSize, EFI_MEMORY_DESCRIPTOR *MemoryMap,
 	return EFI_SUCCESS;
 }
 
+static EFIAPI EFI_STATUS allocate_pages(EFI_ALLOCATE_TYPE Type,
+					EFI_MEMORY_TYPE MemoryType,
+					UINTN NoPages,
+					EFI_PHYSICAL_ADDRESS *Memory)
+{
+	EFI_STATUS ret = EFI_SUCCESS;
+	UINT64 start;
+	UINT64 end = EFI_MAX_ADDRESS;
+	UINT64 max_address;
+	UINT64 number_of_bytes;
+	EFI_PHYSICAL_ADDRESS cur_start, cur_end;
+	EFI_MEMORY_TYPE cur_type;
+	size_t i;
+	UINTN alignment = EFI_PAGE_SIZE;
+
+	if (Type < AllocateAnyPages || Type >= (UINTN) MaxAllocateType)
+		return EFI_INVALID_PARAMETER;
+
+	if (NoPages == 0)
+		return EFI_INVALID_PARAMETER;
+
+	if (((MemoryType >= EfiMaxMemoryType) && (MemoryType <= 0x7fffffff)) ||
+		(MemoryType == EfiConventionalMemory))
+		return EFI_INVALID_PARAMETER;
+
+	if ((Type == AllocateAddress) && ((*Memory & (alignment - 1)) != 0))
+		return EFI_INVALID_PARAMETER;
+
+	NoPages += EFI_SIZE_TO_PAGES(alignment) - 1;
+	NoPages &= ~(EFI_SIZE_TO_PAGES(alignment) - 1);
+
+	start = *Memory;
+
+	max_address = EFI_MAX_ADDRESS;
+
+	if (Type == AllocateAddress) {
+		if (NoPages > RShiftU64(max_address, EFI_PAGE_SHIFT))
+			return EFI_NOT_FOUND;
+
+		number_of_bytes = LShiftU64(NoPages, EFI_PAGE_SHIFT);
+		end = start + number_of_bytes;
+
+		if ((start >= end) ||
+			(start > EFI_MAX_ADDRESS) ||
+			(end > EFI_MAX_ADDRESS))
+			return EFI_NOT_FOUND;
+	}
+	if (Type == AllocateMaxAddress)
+		max_address = start;
+
+
+	if ((max_address < EFI_PAGE_MASK))
+		return EFI_NOT_FOUND;
+
+	if ((max_address & EFI_PAGE_MASK) != EFI_PAGE_MASK) {
+		max_address -= (EFI_PAGE_MASK + 1);
+		max_address &= ~(UINT64) EFI_PAGE_MASK;
+		max_address |= EFI_PAGE_MASK;
+	}
+
+	number_of_bytes = LShiftU64(NoPages, EFI_PAGE_SHIFT);
+
+	for (i = 0; i < efimemmap_nb; i++) {
+		cur_start = efimemmap[i].PhysicalStart;
+		cur_end = cur_start + efimemmap[i].NumberOfPages * EFI_PAGE_SIZE;
+		cur_type = efimemmap[i].Type;
+
+		if (efimemmap[i].Type != EfiConventionalMemory)
+			continue;
+
+		if (Type == AllocateAddress) {
+			if (start < cur_start || cur_end < end)
+				continue;
+		} else {
+			if ((efimemmap[i].NumberOfPages < NoPages) ||
+				(cur_start + number_of_bytes > max_address))
+				continue;
+			start = cur_start;
+			end = start + number_of_bytes;
+		}
+
+		if (start > cur_start) {
+			ret = insert_mem_descr_at(cur_start, start,
+						  cur_type, i++);
+			if (EFI_ERROR(ret))
+				break;
+		}
+
+		set_mem_descr(&efimemmap[i], start, end, MemoryType);
+
+		if (end < cur_end)
+			ret = insert_mem_descr_at(end, cur_end,
+						   cur_type, i + 1);
+		break;
+	}
+
+	if (!EFI_ERROR(ret))
+		*Memory = start;
+
+	return ret;
+}
+
+static EFIAPI EFI_STATUS free_pages(EFI_PHYSICAL_ADDRESS Memory, UINTN NoPages)
+{
+	EFI_STATUS ret = EFI_SUCCESS;
+	EFI_PHYSICAL_ADDRESS cur_start, cur_end;
+	UINT8 i;
+	UINTN alignment = EFI_PAGE_SIZE;
+
+	if ((Memory & (alignment - 1)) != 0)
+		return EFI_INVALID_PARAMETER;
+
+	for (i = 0; i < efimemmap_nb; i++) {
+		cur_start = efimemmap[i].PhysicalStart;
+		cur_end = cur_start + efimemmap[i].NumberOfPages * EFI_PAGE_SIZE;
+
+		if ((cur_start  <= Memory) && (Memory < cur_end))
+			break;
+	}
+
+	if (i == efimemmap_nb)
+		return EFI_NOT_FOUND;
+
+	NoPages += EFI_SIZE_TO_PAGES(alignment) - 1;
+	NoPages &= ~(EFI_SIZE_TO_PAGES(alignment) - 1);
+
+	set_mem_descr(&efimemmap[i], cur_start, cur_end, EfiConventionalMemory);
+
+	return ret;
+}
+
 /* Libpayload binary boundaries */
 extern char _start[], _heap[], _end[];
 
@@ -284,6 +417,8 @@ static EFI_STATUS lpmemmap_init(EFI_SYSTEM_TABLE *st)
 
 	saved_memmap_bs = st->BootServices->GetMemoryMap;
 	st->BootServices->GetMemoryMap = get_memory_map;
+	st->BootServices->AllocatePages = allocate_pages;
+	st->BootServices->FreePages = free_pages;
 	crc32 = st->BootServices->CalculateCrc32;
 
 	return EFI_SUCCESS;
