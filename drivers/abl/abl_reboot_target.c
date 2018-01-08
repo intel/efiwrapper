@@ -321,7 +321,7 @@ static EFI_STATUS capsule_store(const char *buf)
 	partition = buf[1] - '0';
 	memset(name, 0, sizeof(name));
 	strncpy(name, buf + 3, sizeof(name) - 1); /* Number 3 is start index of name in buffer. */
-	name_len = strlen(name);
+	name_len = strlen(name) + 1;
 	ewdbg("capsule parameters: DEVICE=%d PARTITION=%d NAME=%s",
 		  device, partition, name);
 
@@ -342,7 +342,7 @@ static EFI_STATUS capsule_store(const char *buf)
 	capsule_cmd->action = USERCMD_UPDATE_IFWI(name_len + 2);
 	capsule_cmd->device = device;
 	capsule_cmd->partition = partition;
-	strncpy(capsule_cmd->file_name, name, name_len);
+	strlcpy(capsule_cmd->file_name, name, name_len);
 	msg.cdata_payload = (char *)capsule_cmd;
 	msg.cdata_payload_size = capsule_cmd_size;
 	msg.crc = crc32c_msg(&msg);
