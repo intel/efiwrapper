@@ -69,5 +69,6 @@ EFI_STATUS storage_free(EFI_SYSTEM_TABLE *st, EFI_HANDLE handle);
 EFI_STATUS identify_boot_media();
 
 boot_dev_t* get_boot_media();
+UINT8 get_boot_media_device_path_type(void);
 
 #endif	/* _STORAGE_H_ */
