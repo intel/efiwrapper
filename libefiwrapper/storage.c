@@ -45,6 +45,14 @@
 #define MSG_UFS_DP	0x19
 #endif
 
+#ifndef MSG_NVME_DP
+#define MSG_NVME_DP	0x17
+#endif
+
+#ifndef MSG_EMMC_DP
+#define MSG_EMMC_DP	29
+#endif
+
 static EFI_GUID dp_guid = DEVICE_PATH_PROTOCOL;
 
 #define ABL_BDEV "ABL.bdev"
@@ -59,7 +67,7 @@ static boot_dev_t boot_dev = {
 struct storage_dp {
 	PCI_DEVICE_PATH pci;
 	CONTROLLER_DEVICE_PATH ctrl;
-	SCSI_DEVICE_PATH scsi_ufs;
+	SCSI_DEVICE_PATH msg_device_path;
 	EFI_DEVICE_PATH end;
 } __attribute__((__packed__));
 
@@ -83,11 +91,11 @@ static EFI_STATUS dp_init(EFI_SYSTEM_TABLE *st, media_t *media,
 	dp->ctrl.Header.SubType = HW_CONTROLLER_DP;
 	SetDevicePathNodeLength(&dp->ctrl.Header, sizeof(dp->ctrl));
 
-	dp->scsi_ufs.Header.Type = MESSAGING_DEVICE_PATH;
-	dp->scsi_ufs.Header.SubType = MSG_UFS_DP;
-	dp->scsi_ufs.Pun = 0;
-	dp->scsi_ufs.Lun = 0;
-	SetDevicePathNodeLength(&dp->scsi_ufs.Header, sizeof(dp->scsi_ufs));
+	dp->msg_device_path.Header.SubType = get_boot_media_device_path_type();
+	dp->msg_device_path.Header.Type = MESSAGING_DEVICE_PATH;
+	dp->msg_device_path.Pun = 0;
+	dp->msg_device_path.Lun = 0;
+	SetDevicePathNodeLength(&dp->msg_device_path.Header, sizeof(dp->msg_device_path));
 
 	dp->end.Type = END_DEVICE_PATH_TYPE;
 	dp->end.SubType = END_ENTIRE_DEVICE_PATH_SUBTYPE;
@@ -212,4 +220,23 @@ boot_dev_t* get_boot_media()
 	return &boot_dev;
 }
 
+UINT8 get_boot_media_device_path_type(void)
+{
+	switch(boot_dev.type)
+	{
+	case STORAGE_EMMC:
+		return MSG_EMMC_DP;
+
+	case STORAGE_UFS:
+		return MSG_UFS_DP;
+
+	case STORAGE_NVME:
+		return MSG_NVME_DP;
+
+	default:
+		break;
+	}
+
+	return MSG_EMMC_DP;
+}
 
