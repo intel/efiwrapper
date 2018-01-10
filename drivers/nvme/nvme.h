@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Intel Corporation
+ * Copyright (c) 2018, Intel Corporation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,27 +27,12 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __HW_KABYLAKE__
-#define __HW_KABYLAKE__
+#ifndef _NVME_H_
+#define _NVME_H_
 
-/* PCI device id of OTG */
-#define XDCI_PID         0x9D30
-#define XHCI_PID         0x9D2F
+#include <ewdrv.h>
 
-/* PCI device id of EMMC controller */
-#define EMMC_DEVICEID    0x9D2B
+extern ewdrv_t nvme_drv;
 
-/* Kabylake doesn't use UFS, hence set it as default value for build successfully */
-#define UFS_PCI_DID    0x00
-
-#define HW_SERIAL_TYPE        CB_SERIAL_TYPE_MEMORY_MAPPED
-#define HW_SERIAL_REG_WIDTH   4
-
-/* serial port base address */
-#define SERIAL_PCI_DID        0x9d66
-
-/* PCI device id of NVME */
-#define NVME_PCI_DID 	0xF1A5
-
-#endif /* __HW_KABYLAKE__ */
+#endif	/* _NVME_H_ */
 

@@ -72,6 +72,10 @@ int strncmp(const char *s1, const char *s2, size_t n);
 
 /* stdio.h */
 int printf(const char *format, ...);
+int snprintf(char *str, size_t size, const char *fmt, ...);
+
+/* libpayload.h */
+void ndelay(unsigned int n);
 
 /* EFI binary entry point */
 EFI_STATUS efi_main(EFI_HANDLE, EFI_SYSTEM_TABLE *);
