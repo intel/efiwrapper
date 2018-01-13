@@ -53,6 +53,10 @@
 #define MSG_EMMC_DP	29
 #endif
 
+#ifndef MSG_VIRTUAL_MEDIA_DP
+#define MSG_VIRTUAL_MEDIA_DP	0x20
+#endif
+
 static EFI_GUID dp_guid = DEVICE_PATH_PROTOCOL;
 
 #define ABL_BDEV "ABL.bdev"
@@ -205,6 +209,8 @@ EFI_STATUS identify_boot_media()
 		boot_dev.type = STORAGE_UFS;
 	else if (!strncmp(val, "NVME", len))
 		boot_dev.type = STORAGE_NVME;
+	else if (!strncmp(val, "VIRTUAL", len))
+		boot_dev.type = STORAGE_VIRTUAL;
 
 	val = ewarg_getval(ABL_DISKBUS);
 	if (!val)
@@ -232,6 +238,9 @@ UINT8 get_boot_media_device_path_type(void)
 
 	case STORAGE_NVME:
 		return MSG_NVME_DP;
+
+	case STORAGE_VIRTUAL:
+		return MSG_VIRTUAL_MEDIA_DP;
 
 	default:
 		break;
