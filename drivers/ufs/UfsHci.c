@@ -1349,6 +1349,8 @@ UfsExecScsiCmds(
 	//
 	Status = UfsCreateScsiCommandDesc(Private, Lun, Packet, Trd);
 	if (EFI_ERROR(Status)) {
+		if (FreeBuf)
+			free(FreeBuf);
 		return Status;
 	}
 
@@ -1412,17 +1414,17 @@ UfsExecScsiCmds(
 
 	if (Packet->DataDirection == UfsDataIn) {
 		CopyMem(Buffer, Packet->InDataBuffer, Packet->InTransferLength);
-		UfsFreeMem(Private->Pool, Packet->InDataBuffer, Packet->InTransferLength);
 		Packet->InDataBuffer = Buffer;
 	} else {
 		CopyMem(Buffer, Packet->OutDataBuffer, Packet->OutTransferLength);
-		UfsFreeMem(Private->Pool, Packet->OutDataBuffer, Packet->OutTransferLength);
 		Packet->OutDataBuffer = Buffer;
 	}
 
 Exit:
 	UfsStopExecCmd(Private, Slot);
 	UfsFreeMem(Private->Pool, CmdDescBase, CmdDescSize);
+	if (FreeBuf)
+		free(FreeBuf);
 
 	return Status;
 }
