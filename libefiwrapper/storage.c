@@ -210,7 +210,7 @@ EFI_STATUS identify_boot_media()
 	if (!val)
 		return EFI_SUCCESS;
 
-	boot_dev.diskbus = (UINT32)strtol(val, NULL, 16);
+	boot_dev.diskbus = (UINT32)strtoull(val, NULL, 16);
 
 	return EFI_SUCCESS;
 }

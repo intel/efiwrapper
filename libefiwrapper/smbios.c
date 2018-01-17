@@ -214,7 +214,7 @@ EFI_STATUS smbios_init(EFI_SYSTEM_TABLE *st)
 	}
 	smbios.TableAddress = SMBIOS_ADDRESS;
 #else
-	smbios.TableAddress = (UINT32)&smbios_table;
+	smbios.TableAddress = (UINTN)&smbios_table;
 #endif
 	smbios.EntryPointStructureChecksum = 0;
 	smbios.EntryPointStructureChecksum = checksum((UINT8 *)&smbios, sizeof(smbios));

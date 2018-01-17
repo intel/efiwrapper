@@ -37,6 +37,7 @@ typedef struct {
 
 **/
 EFI_STATUS
+EFIAPI
 GetUfsHcMmioBar (
 	IN     UFS_HC_PEI_PRIVATE_DATA       *Private,
 	IN     UINT8                         ControllerId,

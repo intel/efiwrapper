@@ -998,7 +998,7 @@ int ias_flash_file(unsigned char *file_content, int file_size, unsigned char com
 	return error;
 }
 
-static ias_flash_result ias_flash_ioc_firmware(__attribute__((__unused__)) IOC_UART_PROTOCOL * This,
+static EFI_STATUS EFIAPI ias_flash_ioc_firmware(__attribute__((__unused__)) IOC_UART_PROTOCOL * This,
 		UINT8 *file_content,
 		UINT32 file_size)
 

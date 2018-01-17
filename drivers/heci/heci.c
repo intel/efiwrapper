@@ -112,12 +112,12 @@ static void heci_pci_set16(uint32_t reg, uint32_t val)
 
 static uint32_t heci_reg_read(uint32_t base, uint32_t offset)
 {
-	return read32((void *)(base + offset));
+	return read32((void *)(UINTN)(base + offset));
 }
 
 static void heci_reg_write(uint32_t base, uint32_t offset, uint32_t val)
 {
-	write32((void *)(base + offset), val);
+	write32((void *)(UINTN)(base + offset), val);
 }
 
 static int is_dev_ready(uint32_t base)
