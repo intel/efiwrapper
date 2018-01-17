@@ -39,10 +39,16 @@
 /* UFS is not enabled on BXT, hence set it as default value*/
 #define UFS_PCI_DID    0x0000
 
+#ifdef EFIWRAPPER_USE_EC_UART
+#define SERIAL_BASEADDR       0x3f8
+#define HW_SERIAL_TYPE        CB_SERIAL_TYPE_IO_MAPPED
+#define HW_SERIAL_REG_WIDTH   1
+#else
 /* serial port base address */
 #define SERIAL_BASEADDR       0xfc000000
 #define HW_SERIAL_TYPE        CB_SERIAL_TYPE_MEMORY_MAPPED
 #define HW_SERIAL_REG_WIDTH   4
+#endif
 
 #endif /* __HW_BROXTON__ */
 

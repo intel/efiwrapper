@@ -58,6 +58,8 @@ void free(void *ptr);
 void *calloc(size_t nmemb, size_t size);
 void *realloc(void *ptr, size_t size);
 long int strtol(const char *s, char **nptr, int base);
+unsigned long long int strtoull(const char *ptr, char **endptr, int base);
+long atol(const char *nptr);
 
 /* string.h */
 int memcmp(const void *s1, const void *s2, size_t n);

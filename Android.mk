@@ -1,6 +1,11 @@
 EFIWRAPPER_LOCAL_PATH := $(call my-dir)
 EFIWRAPPER_CFLAGS := -Wall -Wextra -Werror
 
+ifeq ($(TARGET_UEFI_ARCH),x86_64)
+EFIWRAPPER_CFLAGS += -mpreferred-stack-boundary=5
+EFIWRAPPER_CFLAGS += -D__STDC_VERSION__=199901L
+endif
+
 ifeq ($(TARGET_BUILD_VARIANT),user)
     EFIWRAPPER_CFLAGS += -DUSER -DUSERDEBUG
 endif
