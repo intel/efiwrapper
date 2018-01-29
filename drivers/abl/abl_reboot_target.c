@@ -69,6 +69,15 @@ struct name2id {
 	int id;
 };
 
+struct nvram_msg {
+	char magic;
+	char size;
+	union _cdata_header cdata_header;
+	char *cdata_payload;
+	uint32_t cdata_payload_size;
+	uint32_t crc;
+} __attribute__((__packed__));
+
 static const struct name2id NAME2ID[] = {
 	{ L"",			0x00 },
 	{ L"boot",		0x00 },
@@ -156,7 +165,7 @@ static EFI_STATUS set_reboot_target(const CHAR16 *name)
 	msg.cdata_payload_size = sizeof(reboot_cmd);
 	msg.size = offsetof(struct nvram_msg, cdata_payload) +
 		sizeof(reboot_cmd) + sizeof(msg.crc);
-	msg.crc = crc32c_msg(&msg);
+	msg.crc = crc32c_msg((char *)&msg, offsetof(struct nvram_msg, cdata_payload), msg.cdata_payload, (size_t)msg.cdata_payload_size);
 
 	write_msg_to_nvram(&msg);
 

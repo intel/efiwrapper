@@ -37,24 +37,6 @@
 #include "heci/heci_protocol.h"
 #include <storage.h>
 
-typedef enum {
-  OsBootDeviceSata,
-  OsBootDeviceSd,
-  OsBootDeviceEmmc,
-  OsBootDeviceUfs,
-  OsBootDeviceSpi,
-  OsBootDeviceUsb,
-  OsBootDeviceNvme,
-  OsBootDeviceMax
-} OS_BOOT_MEDIUM_TYPE;
-
-typedef enum  {
-  EnumFileSystemTypeFat,
-  EnumFileSystemTypeExt2,
-  EnumFileSystemTypeAuto,
-  EnumFileSystemMax
-} OS_FILE_SYSTEM_TYPE;
-
 /*  Compute CRC for one byte (shift register-based: one bit at a time). */
 static uint32_t crc32c_byte(uint32_t crc, unsigned byte)
 {
@@ -81,6 +63,15 @@ static uint32_t crc32c_buf(uint32_t crc, const void *addr, unsigned len)
 	for (i = 0 ; i < len ; i += 1)
 		crc = crc32c_byte(crc, *(uint8_t *)(addr + i));
 
+	return crc;
+}
+
+uint32_t crc32c_msg(const char *msg, UINTN offset, const void *addr, size_t len)
+{
+	uint32_t crc;
+
+	crc = crc32c_buf(~0, msg, offset);
+	crc = crc32c_buf(crc, addr, len);
 	return crc;
 }
 
@@ -177,7 +168,25 @@ static unsigned heci_send_user_command(uint8_t *data, uint8_t length)
 }
 
 #ifdef CAPSULE4SBL
-static EFI_STATUS cse4sbl_capsule_msg_write(cse_msg *msg)
+typedef enum {
+	OsBootDeviceSata,
+	OsBootDeviceSd,
+	OsBootDeviceEmmc,
+	OsBootDeviceUfs,
+	OsBootDeviceSpi,
+	OsBootDeviceUsb,
+	OsBootDeviceNvme,
+	OsBootDeviceMax
+} SBL_OS_BOOT_MEDIUM_TYPE;
+
+typedef enum  {
+	EnumFileSystemTypeFat,
+	EnumFileSystemTypeExt2,
+	EnumFileSystemTypeAuto,
+	EnumFileSystemMax
+} SBL_OS_FILE_SYSTEM_TYPE;
+
+static EFI_STATUS cse4sbl_capsule_msg_write(CSE_MSG *msg)
 {
 	uint8_t *msg_buf, *msg_buf_p, msg_slen;
 	unsigned status;
@@ -188,7 +197,7 @@ static EFI_STATUS cse4sbl_capsule_msg_write(cse_msg *msg)
 	memset(msg_buf, 0, CSE_USRCMD_SIZE);
 	msg_buf_p = msg_buf;
 
-	msg_slen = offsetof(cse_msg, cdata_payload);
+	msg_slen = offsetof(CSE_MSG, cdata_payload);
 	msg_buf_p = (uint8_t *)memcpy(msg_buf_p, (uint8_t *)msg, msg_slen) + msg_slen;
 	msg_slen = msg->cdata_payload_size;
 	msg_buf_p = (uint8_t *)memcpy(msg_buf_p, msg->cdata_payload, msg_slen) + msg_slen;
@@ -199,15 +208,16 @@ static EFI_STATUS cse4sbl_capsule_msg_write(cse_msg *msg)
 	return status;
 }
 
-static EFI_STATUS cse4sbl_capsule_cmd_create(cse_cmd **cmd, size_t *cmd_size, const char *buf)
+static EFI_STATUS cse4sbl_capsule_cmd_create(CSE_CMD **cmd, size_t *cmd_size, const char *buf)
 {
 	char name[32]; /* Length of capsule file name can't exceed 30. */
 	int partition;
+
 	/* storage_type mapping */
-	OS_BOOT_MEDIUM_TYPE device_map[] = {
+	SBL_OS_BOOT_MEDIUM_TYPE device_map[] = {
 		[STORAGE_EMMC]   = OsBootDeviceEmmc,
 		[STORAGE_UFS]    = OsBootDeviceUfs,
-		[STORAGE_SDCARD] = OsBootDeviceSdcard,
+		[STORAGE_SDCARD] = OsBootDeviceSd,
 		[STORAGE_SATA]   = OsBootDeviceSata,
 		[STORAGE_NVME]   = OsBootDeviceNvme,
 		[STORAGE_ALL]    = OsBootDeviceEmmc
@@ -221,18 +231,18 @@ static EFI_STATUS cse4sbl_capsule_cmd_create(cse_cmd **cmd, size_t *cmd_size, co
 	memset(name, 0, sizeof(name));
 	strncpy(name, buf + 3, sizeof(name) - 1); /* Number 3 is start index of name in buffer. */
 
+	boot_dev = get_boot_media();
+
 	ewdbg("capsule parameters: DEVICE=%d PARTITION=%d NAME=%s",
 		  device_map[boot_dev->type], partition, name);
 	if (name[0] != '@')
 		return EFI_INVALID_PARAMETER;
 
-	*cmd_size = sizeof(cse_cmd);
+	*cmd_size = sizeof(CSE_CMD);
 
 	*cmd = malloc(*cmd_size);
 	if (!(*cmd))
 		return EFI_OUT_OF_RESOURCES;
-
-	boot_dev = get_boot_media();
 
 	(*cmd)->dev_addr = boot_dev->diskbus;
 	(*cmd)->dev_type = device_map[boot_dev->type];
@@ -245,13 +255,13 @@ static EFI_STATUS cse4sbl_capsule_cmd_create(cse_cmd **cmd, size_t *cmd_size, co
 	return EFI_SUCCESS;
 }
 
-static int get_cse_msg_sum(cse_msg *msg, cse_cmd *cmd, size_t cmd_size)
+static int get_cse_msg_sum(CSE_MSG *msg, CSE_CMD *cmd, size_t cmd_size)
 {
 	size_t i = 0;
 	char *p = NULL, sum = 0;
 
 	p = (char *)msg;
-	for (i = 0; i < offsetof(cse_msg, cdata_payload); ++i)
+	for (i = 0; i < offsetof(CSE_MSG, cdata_payload); ++i)
 		sum += p[i];
 
 	sum -= msg->check_sum;
@@ -264,7 +274,7 @@ static int get_cse_msg_sum(cse_msg *msg, cse_cmd *cmd, size_t cmd_size)
 }
 
 /* If multiple payload is needed, the cmd and cmd_size could be changed to array */
-static EFI_STATUS cse4sbl_capsule_msg_create(cse_msg **msg, cse_cmd *cmd, size_t cmd_size)
+static EFI_STATUS cse4sbl_capsule_msg_create(CSE_MSG **msg, CSE_CMD *cmd, size_t cmd_size)
 {
 	union _cdata_header cdh;
 
@@ -272,12 +282,12 @@ static EFI_STATUS cse4sbl_capsule_msg_create(cse_msg **msg, cse_cmd *cmd, size_t
 	cdh.tag = CDATA_TAG_USER_CMD;
 	cdh.length = (sizeof(cdh) + cmd_size) / 4;
 
-	*msg = malloc(sizeof(cse_msg));
+	*msg = malloc(sizeof(CSE_MSG));
 	if (!(*msg))
 		return EFI_OUT_OF_RESOURCES;
 
 	(*msg)->magic = NVRAM_VALID_FLAG;
-	(*msg)->total_size = offsetof(cse_msg, cdata_payload) + cmd_size;
+	(*msg)->total_size = offsetof(CSE_MSG, cdata_payload) + cmd_size;
 	(*msg)->revision = 0;
 	(*msg)->check_sum = get_cse_msg_sum(*msg, cmd, cmd_size);
 
@@ -290,7 +300,7 @@ static EFI_STATUS cse4sbl_capsule_msg_create(cse_msg **msg, cse_cmd *cmd, size_t
 	return EFI_SUCCESS;
 }
 #else
-static EFI_STATUS cse4abl_capsule_msg_write(cse_msg *msg)
+static EFI_STATUS cse4abl_capsule_msg_write(CSE_MSG *msg)
 {
 	uint8_t *msg_buf, *msg_buf_p, msg_slen;
 	unsigned status;
@@ -301,7 +311,7 @@ static EFI_STATUS cse4abl_capsule_msg_write(cse_msg *msg)
 	memset(msg_buf, 0, CSE_USRCMD_SIZE);
 	msg_buf_p = msg_buf;
 
-	msg_slen = offsetof(cse_msg, cdata_payload);
+	msg_slen = offsetof(CSE_MSG, cdata_payload);
 	msg_buf_p = (uint8_t *)memcpy(msg_buf_p, (uint8_t *)msg, msg_slen) + msg_slen;
 	msg_slen = msg->cdata_payload_size;
 	msg_buf_p = (uint8_t *)memcpy(msg_buf_p, msg->cdata_payload, msg_slen) + msg_slen;
@@ -314,16 +324,16 @@ static EFI_STATUS cse4abl_capsule_msg_write(cse_msg *msg)
 	return status;
 }
 
-enum capsule_device_type {
+enum abl_capsule_device_type {
 	EMMC = 2,
 	SDCARD = 4
 };
 
-static EFI_STATUS cse4abl_capsule_cmd_create(cse_cmd **cmd, size_t *cmd_size, const char *buf)
+static EFI_STATUS cse4abl_capsule_cmd_create(CSE_CMD **cmd, size_t *cmd_size, const char *buf)
 {
 	char name[32]; /* Length of capsule file name can't exceed 30. */
 	int name_len, partition;
-	enum capsule_device_type device;
+	enum abl_capsule_device_type device;
 
 	ewdbg("capsule buffer: %s", buf); /* Buffer format example: "m1:@0" */
 
@@ -335,7 +345,7 @@ static EFI_STATUS cse4abl_capsule_cmd_create(cse_cmd **cmd, size_t *cmd_size, co
 	ewdbg("capsule parameters: DEVICE=%d PARTITION=%d NAME=%s",
 		  device, partition, name);
 
-	*cmd_size = (offsetof(cse_cmd, file_name) + name_len + 3) & ~3;
+	*cmd_size = (offsetof(CSE_CMD, file_name) + name_len + 3) & ~3;
 
 	*cmd = malloc(*cmd_size);
 	if (!(*cmd))
@@ -348,18 +358,7 @@ static EFI_STATUS cse4abl_capsule_cmd_create(cse_cmd **cmd, size_t *cmd_size, co
 	return EFI_SUCCESS;
 }
 
-uint32_t crc32c_msg(cse_msg *msg)
-{
-	uint32_t crc;
-
-	crc = crc32c_buf(~0, msg,
-			offsetof(cse_msg, cdata_payload));
-	crc = crc32c_buf(crc, msg->cdata_payload,
-			msg->cdata_payload_size);
-	return crc;
-}
-
-static EFI_STATUS cse4abl_capsule_msg_create(cse_msg **msg, cse_cmd *cmd, size_t cmd_size)
+static EFI_STATUS cse4abl_capsule_msg_create(CSE_MSG **msg, CSE_CMD *cmd, size_t cmd_size)
 {
 	union _cdata_header cdh;
 
@@ -367,21 +366,21 @@ static EFI_STATUS cse4abl_capsule_msg_create(cse_msg **msg, cse_cmd *cmd, size_t
 	cdh.tag = CDATA_TAG_USER_CMD;
 	cdh.length = (sizeof(cdh) + cmd_size) / 4;
 
-	*msg = malloc(sizeof(cse_msg));
+	*msg = malloc(sizeof(CSE_MSG));
 	if (!(*msg))
 		return EFI_OUT_OF_RESOURCES;
 
 	(*msg)->magic = NVRAM_VALID_FLAG;
-	(*msg)->size = offsetof(cse_msg, cdata_payload) + cmd_size + sizeof((*msg)->crc);
+	(*msg)->size = offsetof(CSE_MSG, cdata_payload) + cmd_size + sizeof((*msg)->crc);
 	(*msg)->cdata_header.data = cdh.data;
 
 	(*msg)->cdata_payload = (char *)cmd;
 	(*msg)->cdata_payload_size = cmd_size;
-	(*msg)->crc = crc32c_msg((*msg));
+	(*msg)->crc = crc32c_msg((char *)(*msg), offsetof(CSE_MSG, cdata_payload), (*msg)->cdata_payload, (size_t)(*msg)->cdata_payload_size);
 	return EFI_SUCCESS;
 }
 #endif
-static void capsule_free_all(cse_cmd **cmd, cse_msg **msg)
+static void capsule_free_all(CSE_CMD **cmd, CSE_MSG **msg)
 {
 	if (msg != NULL && *msg != NULL) {
 		free(*msg);
@@ -394,10 +393,10 @@ static void capsule_free_all(cse_cmd **cmd, cse_msg **msg)
 }
 
 static struct capsule_opt {
-	EFI_STATUS (*cmd_create)(cse_cmd **cmd, size_t *cmd_size, const char *buf);
-	EFI_STATUS (*msg_create)(cse_msg **msg, cse_cmd *cmd, size_t cmd_size);
-	EFI_STATUS (*msg_write)(cse_msg *msg);
-	void (*free_all)(cse_cmd **cmd, cse_msg **msg);
+	EFI_STATUS (*cmd_create)(CSE_CMD **cmd, size_t *cmd_size, const char *buf);
+	EFI_STATUS (*msg_create)(CSE_MSG **msg, CSE_CMD *cmd, size_t cmd_size);
+	EFI_STATUS (*msg_write)(CSE_MSG *msg);
+	void (*free_all)(CSE_CMD **cmd, CSE_MSG **msg);
 } CAPSULE_OPT = {
 #ifdef CAPSULE4SBL
 	cse4sbl_capsule_cmd_create,
@@ -413,33 +412,33 @@ static struct capsule_opt {
 
 EFI_STATUS capsule_store(const char *buf)
 {
-	cse_msg *capsule_msg = NULL;
-	cse_cmd *capsule_cmd = NULL;
+	CSE_MSG *capsule_msg = NULL;
+	CSE_CMD *capsule_cmd = NULL;
 	size_t capsule_cmd_size;
 	EFI_STATUS ret = EFI_SUCCESS;
 
-	ret = CAPSULE_OPT.cmd_create((cse_cmd **)&capsule_cmd, &capsule_cmd_size, buf);
+	ret = CAPSULE_OPT.cmd_create((CSE_CMD **)&capsule_cmd, &capsule_cmd_size, buf);
 	if (EFI_ERROR(ret)) {
 		ewerr("Error in %s: create capsule command failed!", __func__);
 		goto error;
 	}
 
-	ret = CAPSULE_OPT.msg_create((cse_msg **)&capsule_msg, (cse_cmd *)capsule_cmd, capsule_cmd_size);
+	ret = CAPSULE_OPT.msg_create((CSE_MSG **)&capsule_msg, (CSE_CMD *)capsule_cmd, capsule_cmd_size);
 	if (EFI_ERROR(ret)) {
 		ewerr("Error in %s: create capsule message failed!", __func__);
 		goto error;
 	}
 
-	ret = CAPSULE_OPT.msg_write((cse_msg *)capsule_msg);
+	ret = CAPSULE_OPT.msg_write((CSE_MSG *)capsule_msg);
 	if (EFI_ERROR(ret)) {
 		ewerr("Error in %s: write capsule message failed!", __func__);
 		goto error;
 	}
 
-	CAPSULE_OPT.free_all((cse_cmd **)&capsule_cmd, (cse_msg **)&capsule_msg);
+	CAPSULE_OPT.free_all((CSE_CMD **)&capsule_cmd, (CSE_MSG **)&capsule_msg);
 	return EFI_SUCCESS;
 
 error:
-	CAPSULE_OPT.free_all((cse_cmd **)&capsule_cmd, (cse_msg **)&capsule_msg);
+	CAPSULE_OPT.free_all((CSE_CMD **)&capsule_cmd, (CSE_MSG **)&capsule_msg);
 	return ret;
 }
