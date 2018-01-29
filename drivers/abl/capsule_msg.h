@@ -62,22 +62,22 @@ union _cdata_header {
 };
 
 #ifdef CAPSULE4SBL
-struct image_info {
+struct capsule_image_info {
 	uint64_t image_lba_addr;
 	uint32_t image_length;
 	uint32_t reserved;
 };
 
-struct os_image_info {
+typedef struct cse4sbl_capsule_cmd {
 	uint32_t dev_addr;
 	uint8_t dev_type;
 	uint8_t fs_type;
 	uint8_t hw_part;
 	uint8_t sw_part;
-	struct image_info file_path;
-} __attribute__((__packed__));
+	struct capsule_image_info file_path;
+} __attribute__((__packed__)) CSE_CMD;
 
-struct cse4sbl_msg {
+typedef struct cse4sbl_capsule_msg {
 	uint16_t magic;
 	uint16_t total_size;
 	char revision;
@@ -85,33 +85,27 @@ struct cse4sbl_msg {
 	char reserved[2];
 	union _cdata_header cdata_header;
 	char *cdata_payload;
-	size_t cdata_payload_size;
-} __attribute__((__packed__));
-
-typedef struct cse4sbl_msg cse_msg;
-typedef struct os_image_info cse_cmd;
+	uint32_t cdata_payload_size;
+} __attribute__((__packed__)) CSE_MSG;
 #else
-struct nvram_capsule_cmd {
+typedef struct cse4abl_capsule_cmd {
 	char action;
 	char device;
 	char partition;
 	char file_name[1];
-} __attribute__((__packed__));
+} __attribute__((__packed__)) CSE_CMD;
 
-struct nvram_msg {
+typedef struct cse4abl_capsule_msg {
 	char magic;
 	char size;
 	union _cdata_header cdata_header;
 	char *cdata_payload;
-	size_t cdata_payload_size;
+	uint32_t cdata_payload_size;
 	uint32_t crc;
-} __attribute__((__packed__));
-
-typedef struct nvram_msg cse_msg;
-typedef struct nvram_capsule_cmd cse_cmd;
-uint32_t crc32c_msg(cse_msg *cse_msg);
+} __attribute__((__packed__)) CSE_MSG;
 #endif
 
+uint32_t crc32c_msg(const char *msg, UINTN offset, const void *addr, size_t len);
 EFI_STATUS capsule_store(const char *buf);
 
 #endif /* ifndef _CAPSULE_MSG_H_ */
