@@ -36,6 +36,21 @@
 #include <hwconfig.h>
 #include "s8250mem32.h"
 
+#ifndef SERIAL_BASEADDR
+#include <pci/pci.h>
+#define SERIAL_BASEADDR       GetPciUartBase(SERIAL_PCI_DID)
+#define INTEL_VID             0x8086
+static uint32_t GetPciUartBase(uint32_t pci_did)
+{
+	uint32_t addr;
+	pcidev_t pci_dev;
+	pci_find_device(INTEL_VID, pci_did, &pci_dev);
+	addr = pci_read_config32(pci_dev, PCI_BASE_ADDRESS_0);
+	addr = addr & ~0xf;
+	return addr;
+}
+#endif
+
 static EFI_STATUS s8250mem32_init(__attribute__((__unused__)) EFI_SYSTEM_TABLE *st)
 {
 	static struct cb_serial s;

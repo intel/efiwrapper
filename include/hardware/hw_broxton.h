@@ -45,7 +45,7 @@
 #define HW_SERIAL_REG_WIDTH   1
 #else
 /* serial port base address */
-#define SERIAL_BASEADDR       0xfc000000
+#define SERIAL_PCI_DID        0x5ac0
 #define HW_SERIAL_TYPE        CB_SERIAL_TYPE_MEMORY_MAPPED
 #define HW_SERIAL_REG_WIDTH   4
 #endif

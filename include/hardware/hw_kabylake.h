@@ -30,10 +30,6 @@
 #ifndef __HW_KABYLAKE__
 #define __HW_KABYLAKE__
 
-
-#include "hw_pci_uart.h"
-
-
 /* PCI device id of OTG */
 #define XDCI_PID         0x9D30
 #define XHCI_PID         0x9D2F
@@ -48,19 +44,7 @@
 #define HW_SERIAL_REG_WIDTH   4
 
 /* serial port base address */
-#define KBL_PCI_EXPRESS_BASE_ADDR                     0xE0000000
-#define KBL_PCI_FUNCTION_NUMBER_PCH_SERIAL_IO_UART2   0
-#define KBL_DEFAULT_UART_BASEADDR                     0x8175E000
-static inline uint32_t KblGetPciUartBase(void)
-{
-    uint32_t base;
+#define SERIAL_PCI_DID        0x9d66
 
-    base = GetPciUartBase(KBL_PCI_EXPRESS_BASE_ADDR, KBL_PCI_FUNCTION_NUMBER_PCH_SERIAL_IO_UART2);
-    if (base == 0)
-        base = KBL_DEFAULT_UART_BASEADDR;
-
-    return base;
-}
-#define SERIAL_BASEADDR  KblGetPciUartBase()
 #endif /* __HW_KABYLAKE__ */
 

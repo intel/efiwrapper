@@ -30,8 +30,6 @@
 #ifndef __HW_ICELAKE__
 #define __HW_ICELAKE__
 
-#include "hw_pci_uart.h"
-
 /* PCI device id of OTG */
 #define XDCI_PID         0x9D30
 #define XHCI_PID         0x9D2F
@@ -44,21 +42,7 @@
 
 /* serial port base address */
 #ifndef EFIWRAPPER_USE_EC_UART
-#define ICL_PCI_EXPRESS_BASE_ADDR                     0xC0000000
-#define ICL_PCI_FUNCTION_NUMBER_PCH_SERIAL_IO_UART2   2
-#define ICL_DEFAULT_UART_BASEADDR                     0x8334D000
-static inline uint32_t IclGetPciUartBase(void)
-{
-    uint32_t base;
-
-    base = GetPciUartBase(ICL_PCI_EXPRESS_BASE_ADDR, ICL_PCI_FUNCTION_NUMBER_PCH_SERIAL_IO_UART2);
-    if (base == 0)
-        base = ICL_DEFAULT_UART_BASEADDR;
-
-    return base;
-}
-
-#define SERIAL_BASEADDR  IclGetPciUartBase()
+#define SERIAL_PCI_DID        0x34c7
 #define HW_SERIAL_TYPE        CB_SERIAL_TYPE_MEMORY_MAPPED
 #define HW_SERIAL_REG_WIDTH   4
 
