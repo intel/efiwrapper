@@ -286,7 +286,6 @@ SynchronousRequest (
 	volatile VIRTIO_BLK_REQ Request;
 	volatile UINT8          *HostStatus;
 	VOID                    *HostStatusBuffer;
-	VOID                    *DataBuffer;
 	DESC_INDICES            Indices;
 	VOID                    *RequestMapping;
 	VOID                    *StatusMapping;
@@ -319,22 +318,6 @@ SynchronousRequest (
 		VIRTIO_BLK_T_IN;
 	Request.IoPrio = 0;
 	Request.Sector = MultU64x32(Lba, BlockSize / 512);
-
-	//DataBuffer
-	Status = Dev->VirtIo->AllocateSharedPages (
-		Dev->VirtIo,
-		EFI_SIZE_TO_PAGES (BufferSize),
-		&DataBuffer
-		);
-	if (EFI_ERROR (Status)) {
-		return EFI_DEVICE_ERROR;
-	}
-
-	//
-	// Copy write data from orignial buffer
-	//
-	if (RequestIsWrite)
-		CopyMem(DataBuffer, (VOID*)Buffer, BufferSize);
 
 	//
 	// Host status is bi-directional (we preset with a value and expect the
@@ -378,7 +361,7 @@ SynchronousRequest (
 		(RequestIsWrite ?
 		VirtioOperationBusMasterRead :
 		VirtioOperationBusMasterWrite),
-		(VOID *) DataBuffer,
+		(VOID *) Buffer,
 		BufferSize,
 		&BufferDeviceAddress,
 		&BufferMapping
@@ -482,12 +465,6 @@ SynchronousRequest (
 		__FUNCTION__));
 	}
 
-	//
-	// Copy read data to orignial buffer
-	//
-	if (!RequestIsWrite)
-		CopyMem((VOID*)Buffer, DataBuffer, BufferSize);
-
 	Dev->VirtIo->UnmapSharedBuffer (Dev->VirtIo, StatusMapping);
 
 	UnmapDataBuffer:
@@ -511,15 +488,38 @@ SynchronousRequest (
 			HostStatusBuffer
 			);
 
-	if (BufferSize > 0) {
-		Dev->VirtIo->FreeSharedPages (
-			Dev->VirtIo,
-			EFI_SIZE_TO_PAGES (BufferSize),
-			DataBuffer
-			);
+	return Status;
+}
+
+
+EFI_STATUS
+EFIAPI
+VirtioBlkReadBlocksInternal (
+	IN VBLK_DEV   *Dev,
+	IN  EFI_LBA   Lba,
+	IN  UINTN     BufferSize,
+	OUT VOID      *Buffer
+	)
+{
+	EFI_STATUS Status;
+
+	Status = VerifyReadWriteRequest (
+		&Dev->BlockIoMedia,
+		Lba,
+		BufferSize,
+		FALSE               // RequestIsRead
+		);
+	if (EFI_ERROR (Status)) {
+		return Status;
 	}
 
-	return Status;
+	return SynchronousRequest (
+		Dev,
+		Lba,
+		BufferSize,
+		Buffer,
+		FALSE       // RequestIsRead
+		);
 }
 
 
@@ -553,30 +553,92 @@ VirtioBlkReadBlocks (
 {
 	VBLK_DEV   *Dev;
 	EFI_STATUS Status;
+	VOID   *DataBuffer;
+	UINT32 BlockSize;
+	UINT32 MaxSize;
+	UINT32 ReadSize;
 
 	if (BufferSize == 0) {
 		return EFI_SUCCESS;
 	}
 
 	Dev = VIRTIO_BLK_FROM_BLOCK_IO (This);
+	BlockSize = Dev->BlockIoMedia.BlockSize;
+	MaxSize = 0x400 << EFI_PAGE_SHIFT;
+
+	//DataBuffer
+	Status = Dev->VirtIo->AllocateSharedPages (
+		Dev->VirtIo,
+		EFI_SIZE_TO_PAGES ((BufferSize > MaxSize) ? MaxSize : BufferSize),
+		&DataBuffer
+		);
+	if (EFI_ERROR (Status)) {
+		return EFI_DEVICE_ERROR;
+	}
+
+	while (BufferSize > 0) {
+		if (BufferSize >= MaxSize)
+			ReadSize = MaxSize;
+		else
+			ReadSize = BufferSize;
+
+		Status = VirtioBlkReadBlocksInternal (Dev, Lba, ReadSize, DataBuffer);
+		CopyMem(Buffer, DataBuffer, ReadSize);
+		Lba += ReadSize / BlockSize;
+		Buffer = (VOID *)((char *)Buffer + ReadSize);
+		BufferSize -= ReadSize;
+
+		if (EFI_ERROR(Status))
+			break;
+	}
+
+	Dev->VirtIo->FreeSharedPages (
+		Dev->VirtIo,
+		EFI_SIZE_TO_PAGES (BufferSize),
+		DataBuffer
+		);
+
+	return Status;
+}
+
+
+EFI_STATUS
+EFIAPI
+VirtioBlkWriteBlocksInternal (
+	IN VBLK_DEV   *Dev,
+	IN EFI_LBA    Lba,
+	IN UINTN      BufferSize,
+	IN VOID       *Buffer
+	)
+{
+	EFI_STATUS Status;
+
+	if (BufferSize == 0) {
+		return EFI_SUCCESS;
+	}
+
 	Status = VerifyReadWriteRequest (
 		&Dev->BlockIoMedia,
 		Lba,
 		BufferSize,
-		FALSE               // RequestIsWrite
-		);
+		TRUE                // RequestIsWrite
+	);
+
 	if (EFI_ERROR (Status)) {
 		return Status;
 	}
 
-	return SynchronousRequest (
+	Status = SynchronousRequest (
 		Dev,
 		Lba,
 		BufferSize,
 		Buffer,
-		FALSE       // RequestIsWrite
-		);
+		TRUE        // RequestIsWrite
+	);
+
+	return Status;
 }
+
 
 /**
 
@@ -607,30 +669,53 @@ VirtioBlkWriteBlocks (
 	)
 {
 	VBLK_DEV   *Dev;
-	EFI_STATUS Status;
+	EFI_STATUS Status = EFI_SUCCESS;
+	VOID   *DataBuffer;
+	UINT32 BlockSize;
+	UINT32 MaxSize;
+	UINT32 WriteSize;
 
 	if (BufferSize == 0) {
 		return EFI_SUCCESS;
 	}
 
 	Dev = VIRTIO_BLK_FROM_BLOCK_IO (This);
-	Status = VerifyReadWriteRequest (
-		&Dev->BlockIoMedia,
-		Lba,
-		BufferSize,
-		TRUE                // RequestIsWrite
-	);
+	BlockSize = Dev->BlockIoMedia.BlockSize;
+	MaxSize = 0x400 << EFI_PAGE_SHIFT;
+
+	//DataBuffer
+	Status = Dev->VirtIo->AllocateSharedPages (
+		Dev->VirtIo,
+		EFI_SIZE_TO_PAGES ((BufferSize > MaxSize) ? MaxSize : BufferSize),
+		&DataBuffer
+		);
 	if (EFI_ERROR (Status)) {
-		return Status;
+		return EFI_DEVICE_ERROR;
 	}
 
-	return SynchronousRequest (
-		Dev,
-		Lba,
-		BufferSize,
-		Buffer,
-		TRUE        // RequestIsWrite
-	);
+	while (BufferSize > 0) {
+		if (BufferSize >= MaxSize)
+			WriteSize = MaxSize;
+		else
+			WriteSize = BufferSize;
+
+		CopyMem(DataBuffer, Buffer, WriteSize);
+		Status = VirtioBlkWriteBlocksInternal (Dev, Lba, WriteSize, DataBuffer);
+		Lba += WriteSize / BlockSize;
+		Buffer = (VOID *)((char *)Buffer + WriteSize);
+		BufferSize -= WriteSize;
+
+		if (EFI_ERROR(Status))
+			break;
+	}
+
+	Dev->VirtIo->FreeSharedPages (
+		Dev->VirtIo,
+		EFI_SIZE_TO_PAGES (BufferSize),
+		DataBuffer
+		);
+
+	return Status;
 }
 
 
