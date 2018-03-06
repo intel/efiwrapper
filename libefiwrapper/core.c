@@ -40,6 +40,7 @@
 #include "serialio.h"
 #include "smbios.h"
 #include "storage.h"
+#include "version.h"
 
 static EFI_GUID image_guid = LOADED_IMAGE_PROTOCOL;
 static EFI_BOOT_SERVICES bs;
@@ -65,6 +66,18 @@ static EFI_LOADED_IMAGE img = {
 	.Revision = EFI_IMAGE_INFORMATION_REVISION,
 	.ParentHandle = NULL,
 	.SystemTable = &st
+};
+
+static EFI_GUID EFIWRAPPER_GUID =
+	{ 0x59d0d866, 0x5637, 0x47a9,
+	  { 0xb7, 0x50, 0x42, 0x60, 0x0a, 0x54, 0x5b, 0x63 }};
+
+static struct {
+	UINT32 MajorRevision;
+	UINT32 MinorRevision;
+} efiwrapper = {
+	.MajorRevision = EFIWRAPPER_MAJOR,
+	.MinorRevision = EFIWRAPPER_MINOR
 };
 
 static struct component {
@@ -132,6 +145,12 @@ EFI_STATUS efiwrapper_init(int argc, char **argv, EFI_SYSTEM_TABLE **st_p,
 	ret = uefi_call_wrapper(st.BootServices->InstallProtocolInterface, 4,
 				img_handle, &image_guid,
 				EFI_NATIVE_INTERFACE, &img);
+	if (EFI_ERROR(ret))
+		goto err_components;
+
+	ret = uefi_call_wrapper(st.BootServices->InstallProtocolInterface, 4,
+				img_handle, &EFIWRAPPER_GUID,
+				EFI_NATIVE_INTERFACE, &efiwrapper);
 	if (EFI_ERROR(ret))
 		goto err_components;
 
