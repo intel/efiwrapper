@@ -40,6 +40,19 @@
 #define BUILD_VARIANT           "-eng"
 #endif
 
-#define EFIWRAPPER_VERSION "efiwrapper-01.0C" BUILD_VARIANT
+#define STRINGIFY(x)	#x
+#define TOSTRING(x)	STRINGIFY(x)
+#define PASTE(a,b)	a##b
+#define HEX(a)		PASTE(0x, a)
+
+#define _EFIWRAPPER_MAJOR	01
+#define _EFIWRAPPER_MINOR	0C
+
+#define EFIWRAPPER_MAJOR HEX(_EFIWRAPPER_MAJOR)
+#define EFIWRAPPER_MINOR HEX(_EFIWRAPPER_MINOR)
+
+#define EFIWRAPPER_VERSION ("efiwrapper-"			\
+			    TOSTRING(_EFIWRAPPER_MAJOR) "."	\
+			    TOSTRING(_EFIWRAPPER_MINOR) BUILD_VARIANT)
 
 #endif	/* _VERSION_H_ */
