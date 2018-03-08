@@ -22,7 +22,7 @@
  *
  ******************************************************************************/
 
-#ifndef _BXT_SDHCI_H
+#ifndef _BXT_SDHCI_H_
 #define _BXT_SDHCI_H_
 
 #include "sdhci.h"

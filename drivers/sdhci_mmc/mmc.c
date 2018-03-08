@@ -435,7 +435,7 @@ int mmc_init_card(pcidev_t dev)
 
 	host->init_controller(host);
 
-	mmc_reset(m);
+	mmc_reset();
 
 	/*
 	** There are two ways of differentiating between an SD or eMMC card.
@@ -443,7 +443,7 @@ int mmc_init_card(pcidev_t dev)
 	** eMMC. Same applies for eMMC and CMD8.
 	** For fastboot sake assume card is eMMC.
 	*/
-	err = mmc_send_cmd1(m);
+	err = mmc_send_cmd1();
 
 	if (err) {
 		ewerr("Error MMC host controller not found");
