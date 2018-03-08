@@ -152,11 +152,11 @@ EFI_STATUS efiwrapper_init(int argc, char **argv, EFI_SYSTEM_TABLE **st_p,
 				img_handle, &EFIWRAPPER_GUID,
 				EFI_NATIVE_INTERFACE, &efiwrapper);
 	if (EFI_ERROR(ret))
-		goto err_components;
+		goto err_img;
 
 	ret = set_load_options(argc, argv);
 	if (EFI_ERROR(ret))
-		goto err_img;
+		goto err_efiwrapper;
 
 	ret = crc32((void *)&st, sizeof(st), &st.Hdr.CRC32);
 	if (EFI_ERROR(ret))
@@ -176,6 +176,10 @@ EFI_STATUS efiwrapper_init(int argc, char **argv, EFI_SYSTEM_TABLE **st_p,
 
 err_load_options:
 	free(img.LoadOptions);
+
+err_efiwrapper:
+	uefi_call_wrapper(st.BootServices->UninstallProtocolInterface, 3,
+			  *img_handle, &EFIWRAPPER_GUID, &img);
 
 err_img:
 	uefi_call_wrapper(st.BootServices->UninstallProtocolInterface, 3,
