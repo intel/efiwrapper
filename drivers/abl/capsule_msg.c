@@ -106,7 +106,7 @@ typedef struct _HECI_USER_CMD_RESPONSE {
 #define BIOS_FIXED_HOST_ADDR    	0
 static unsigned heci_send_user_command(uint8_t *data, uint8_t length)
 {
-	unsigned status;
+	EFI_STATUS status;
 	uint32_t HeciSendLength;
 	uint32_t HeciRecvLength;
 	HECI_USER_CMD_REQUEST *SendCommand;
@@ -149,10 +149,10 @@ static unsigned heci_send_user_command(uint8_t *data, uint8_t length)
 							   HeciSendLength, &HeciRecvLength,
 							   BIOS_FIXED_HOST_ADDR, 0x7);
 	if (status != 0) {
-		ewerr("Heci send fail: %x", status);
+		ewerr("Heci send fail: %x", (UINT32)status);
 		return status;
 	}
-	ewdbg("uefi_call_wrapper(SendwACK) =  %d", status);
+	ewdbg("uefi_call_wrapper(SendwACK) =  %d", (UINT32)status);
 
 	CommandResp = (HECI_USER_CMD_RESPONSE*)DataBuffer;
 	ewdbg( "Group    =%08x\n", CommandResp->Header.Fields.GroupId);
@@ -161,7 +161,7 @@ static unsigned heci_send_user_command(uint8_t *data, uint8_t length)
 	ewdbg( "Result   =%08x\n", CommandResp->Header.Fields.Result);
 	if (CommandResp->Header.Fields.Result != 0) {
 		status = CommandResp->Header.Fields.Result;
-		ewerr("Send cmd fail: %x", status);
+		ewerr("Send cmd fail: %x", (UINT32)status);
 	}
 
 	return status;
