@@ -3,7 +3,6 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 LOCAL_MODULE := efiwrapper_host-$(TARGET_BUILD_VARIANT)
 LOCAL_MODULE_STEM := efiwrapper_host
-LOCAL_CLANG := false
 LOCAL_CFLAGS := $(EFIWRAPPER_HOST_CFLAGS)
 LOCAL_STATIC_LIBRARIES := \
 	libefiwrapper_host-$(TARGET_BUILD_VARIANT)

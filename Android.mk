@@ -3,7 +3,6 @@ EFIWRAPPER_CFLAGS := -Wall -Wextra -Werror
 
 ifeq ($(TARGET_UEFI_ARCH),x86_64)
 EFIWRAPPER_CFLAGS += -DBUILD_X64
-EFIWRAPPER_CFLAGS += -mpreferred-stack-boundary=5
 EFIWRAPPER_CFLAGS += -D__STDC_VERSION__=199901L
 endif
 
@@ -78,8 +77,6 @@ EFIWRAPPER_HOST_C_INCLUDES := \
 	external/gnu-efi/gnu-efi-3.0/inc \
 	external/gnu-efi/gnu-efi-3.0/inc/$(TARGET_EFI_ARCH_NAME) \
 	external/gnu-efi/gnu-efi-3.0/inc/protocol
-
-LOCAL_CLANG_EXCEPTION_PROJECTS += $(EFIWRAPPER_LOCAL_PATH)
 
 include $(call all-subdir-makefiles)
 
