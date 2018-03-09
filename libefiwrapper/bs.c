@@ -232,7 +232,7 @@ static EFIAPI EFI_STATUS
 bs_exit_boot_services(__attribute__((__unused__)) EFI_HANDLE ImageHandle,
 		      __attribute__((__unused__)) UINTN MapKey)
 {
-	return EFI_UNSUPPORTED;
+	return EFI_SUCCESS;
 }
 
 static EFIAPI EFI_STATUS
