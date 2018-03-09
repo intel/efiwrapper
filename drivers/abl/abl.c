@@ -124,25 +124,14 @@ static EFI_STATUS set_smbios_fields(void)
 	return EFI_SUCCESS;
 }
 
-static EFIAPI EFI_STATUS
-abl_exit_bs(__attribute__((__unused__)) EFI_HANDLE ImageHandle,
-	    __attribute__((__unused__)) UINTN MapKey)
-{
-	/* On ABL platform there is no Boot state. */
-	return EFI_SUCCESS;
-}
-
 extern ewvar_storage_t reboot_target_storage;
-static EFI_EXIT_BOOT_SERVICES saved_exit_bs;
 
-static EFI_STATUS abl_init(EFI_SYSTEM_TABLE *st)
+static EFI_STATUS abl_init(__attribute__((__unused__)) EFI_SYSTEM_TABLE *st)
 {
 	if (!st)
 		return EFI_INVALID_PARAMETER;
 
 	ewvar_register_storage(&reboot_target_storage);
-	saved_exit_bs = st->BootServices->ExitBootServices;
-	st->BootServices->ExitBootServices = abl_exit_bs;
 
 	return set_smbios_fields();
 }
@@ -153,7 +142,6 @@ static EFI_STATUS abl_exit(EFI_SYSTEM_TABLE *st)
 		return EFI_INVALID_PARAMETER;
 
 	ewvar_unregister_storage();
-	st->BootServices->ExitBootServices = saved_exit_bs;
 
 	return EFI_SUCCESS;
 }
