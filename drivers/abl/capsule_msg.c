@@ -191,6 +191,12 @@ static EFI_STATUS cse4sbl_capsule_msg_write(CSE_MSG *msg)
 	uint8_t *msg_buf, *msg_buf_p, msg_slen;
 	unsigned status;
 
+	// It's temporary patch before SBL officially support HECI cmd trigger fw update"
+	ewdbg("%s: Capsule requested, set CMOS values for ICL KBL hack", __func__);
+	outb(0x40, 0x70);
+	outb(0x5A, 0x71);
+	return EFI_SUCCESS;
+
 	msg_buf = malloc(CSE_USRCMD_SIZE);
 	if (!msg_buf)
 		return EFI_OUT_OF_RESOURCES;
