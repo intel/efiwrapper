@@ -348,6 +348,9 @@ static EFIAPI EFI_STATUS allocate_pages(EFI_ALLOCATE_TYPE Type,
 		break;
 	}
 
+	if (i == efimemmap_nb)
+		return EFI_NOT_FOUND;
+
 	if (!EFI_ERROR(ret))
 		*Memory = start;
 
