@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Intel Corporation
+ * Copyright (c) 2018, Intel Corporation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,33 +27,32 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef __HW_TIGERLAKE__
+#define __HW_TIGERLAKE__
 
-#ifndef __HARDWARE_CONFIG__
-#define __HARDWARE_CONFIG__
+/* PCI device id of OTG */
+#define XDCI_PID         0x9D30
+#define XHCI_PID         0x9D2F
 
+/* PCI device id of EMMC controller */
+#define EMMC_DEVICEID    0xA0C4
 
-#if defined(PLATFORM_ICELAKE)
+/* UFS */
+#define UFS_PCI_DID    0xA0FA
 
-    #include "hw_icelake.h"
+/* serial port base address */
+#ifndef EFIWRAPPER_USE_EC_UART
+#define SERIAL_PCI_DID        0xA0c7
+#define HW_SERIAL_TYPE        CB_SERIAL_TYPE_MEMORY_MAPPED
+#define HW_SERIAL_REG_WIDTH   4
 
-#elif defined(PLATFORM_TIGERLAKE)
+#else /* EFIWRAPPER_USE_EC_UART */
 
-    #include "hw_tigerlake.h"
+#define SERIAL_BASEADDR       0x3f8
+#define HW_SERIAL_TYPE        CB_SERIAL_TYPE_IO_MAPPED
+#define HW_SERIAL_REG_WIDTH   1
 
-#elif defined(PLATFORM_KABYLAKE)
+#endif /* EFIWRAPPER_USE_EC_UART */
 
-    #include "hw_kabylake.h"
-
-#elif defined(PLATFORM_BROXTON)
-
-    #include "hw_broxton.h"
-
-#else
-
-    /* default: broxton */
-    #include "hw_broxton.h"
-
-#endif
-
-#endif  /* __HARDWARE_CONFIG__ */
+#endif /* __HW_TIGERLAKE__ */
 
