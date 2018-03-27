@@ -186,15 +186,22 @@ typedef enum  {
 	EnumFileSystemMax
 } SBL_OS_FILE_SYSTEM_TYPE;
 
+static BOOLEAN capsule_request_slot_b;
+
 static EFI_STATUS cse4sbl_capsule_msg_write(CSE_MSG *msg)
 {
 	uint8_t *msg_buf, *msg_buf_p, msg_slen;
 	unsigned status;
 
 	// It's temporary patch before SBL officially support HECI cmd trigger fw update"
-	ewdbg("%s: Capsule requested, set CMOS values for ICL KBL hack", __func__);
 	outb(0x40, 0x70);
-	outb(0x5A, 0x71);
+	if (capsule_request_slot_b) {
+		ewdbg("%s: Capsule requested, set CMOS 0x5B value for ICL KBL hack",__func__);
+		outb(0x5B, 0x71);
+	} else {
+		ewdbg("%s: Capsule requested, set CMOS 0x5A value for ICL KBL hack",__func__);
+		outb(0x5A, 0x71);
+	}
 	return EFI_SUCCESS;
 
 	msg_buf = malloc(CSE_USRCMD_SIZE);
@@ -234,6 +241,10 @@ static EFI_STATUS cse4sbl_capsule_cmd_create(CSE_CMD **cmd, size_t *cmd_size, co
 	ewdbg("capsule buffer: %s", buf); /* Buffer format example: "m1:@0" */
 
 	partition = buf[1] - '0';
+	if (partition == 2)
+		capsule_request_slot_b = TRUE;
+	else
+		capsule_request_slot_b = FALSE;
 	memset(name, 0, sizeof(name));
 	strncpy(name, buf + 3, sizeof(name) - 1); /* Number 3 is start index of name in buffer. */
 
