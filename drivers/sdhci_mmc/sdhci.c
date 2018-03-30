@@ -73,8 +73,7 @@ static int sdhci_abort_tuning(struct sdhci *host)
 
 	memset(&tuning_cmd, 0, sizeof(tuning_cmd));
 	tuning_cmd.index = CMD_MMC_STOP_TRANSMISSION;
-	tuning_cmd.flags = MMC_RSP_SPI_R1B | MMC_RSP_R1B | MMC_CMD_AC;
-
+	tuning_cmd.flags = MMC_RESPONSE_SPI_R1B | MMC_RESPONSE_R1B | MMC_COMMAND_AC;
 	tuning_cmd.flags |= CMDF_DATA_XFER | CMDF_USE_DMA;
 	tuning_cmd.flags |= CMDF_WR_XFER;
 
@@ -93,19 +92,17 @@ static int sdhci_send_tuning(struct sdhci *host, uint32_t opcode)
 {
 	struct cmd tuning_cmd = {0};
 	uint32_t buf[256]={0};
+	uint64_t start;
 	int ret;
 
 	tuning_cmd.index = opcode;
 	tuning_cmd.args = 0;
-
-	tuning_cmd.flags = MMC_RSP_R1 | MMC_CMD_ADTC;
-
+	tuning_cmd.flags = MMC_RESPONSE_R1 | MMC_COMMAND_ADTC;
 	tuning_cmd.flags |= CMDF_RD_XFER;
-	tuning_cmd.resp_len = 32;
-
 	tuning_cmd.flags |= SDHCI_CMD_DATA_PRESENT;
 	tuning_cmd.flags |= TM_USE_DMA;
 	tuning_cmd.flags |= TM_BLOCK_CNT_ENABLE;
+	tuning_cmd.resp_len = 32;
 	tuning_cmd.addr = (uintptr_t)buf;
 	tuning_cmd.retry = 0;
 
@@ -118,7 +115,7 @@ static int sdhci_send_tuning(struct sdhci *host, uint32_t opcode)
 
 	sdhci_write16(host, SDHCI_TRANSFER_MODE, SDHCI_TRNS_READ );
 
-	uint64_t start = timer_us(0);
+	start = timer_us(0);
 	do
 	{
 		unsigned int intmask;
@@ -152,7 +149,7 @@ static int sdhci_execute_tuning(struct mmc *m)
 	 * Issue TUNING_CMD repeatedly till Execute Tuning is set to 0 or the number
 	 * of loops reaches 40 times.
 	 */
-	for(counter = 0; counter <= MAX_TUNING_LOOP; counter ++)
+	for (counter = 0; counter <= MAX_TUNING_LOOP; counter ++)
 	{
 		ret = sdhci_send_tuning(host, CMD_MMC_SEND_TUNING_BLOCK_HS200);
 		if (ret != EFI_SUCCESS)

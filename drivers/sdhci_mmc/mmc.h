@@ -110,25 +110,21 @@ struct cmd
 
 };
 
-#define MMC_RSP_PRESENT		(1 << 0)
-#define MMC_RSP_CRC			(1 << 2)		/* expect valid crc */
-#define MMC_RSP_BUSY		(1 << 3)		/* card may send busy */
-#define MMC_RSP_OPCODE		(1 << 4)		/* response contains opcode */
+#define MMC_COMMAND(cmd)		(cmd << 5)
+#define MMC_COMMAND_AC			MMC_COMMAND(0)
+#define MMC_COMMAND_ADTC		MMC_COMMAND(1)
 
-#define MMC_CMD_MASK		(3 << 5)		/* non-SPI command type */
-#define MMC_CMD_AC			(0 << 5)
-#define MMC_CMD_ADTC		(1 << 5)
-#define MMC_CMD_BC			(2 << 5)
-#define MMC_CMD_BCR			(3 << 5)
+#define MMC_RESPONSE_BIT(bit)	(1 << bit)
+#define MMC_RESPONSE_PRESENT	MMC_RESPONSE_BIT(0)
+#define MMC_RESPONSE_CRC		MMC_RESPONSE_BIT(2)
+#define MMC_RESPONSE_BUSY		MMC_RESPONSE_BIT(3)
+#define MMC_RESPONSE_OPCODE		MMC_RESPONSE_BIT(4)
+#define MMC_RESPONSE_R1			(MMC_RESPONSE_PRESENT | MMC_RESPONSE_CRC | MMC_RESPONSE_OPCODE)
+#define MMC_RESPONSE_R1B		(MMC_RESPONSE_PRESENT | MMC_RESPONSE_CRC | MMC_RESPONSE_OPCODE | MMC_RESPONSE_BUSY)
 
-#define MMC_RSP_SPI_S1		(1 << 7)		/* one status byte */
-#define MMC_RSP_SPI_S2		(1 << 8)		/* second byte */
-#define MMC_RSP_SPI_B4		(1 << 9)		/* four data bytes */
-#define MMC_RSP_SPI_BUSY	(1 << 10)		/* card may send busy */
-#define MMC_RSP_R1			(MMC_RSP_PRESENT|MMC_RSP_CRC|MMC_RSP_OPCODE)
-#define MMC_RSP_R1B			(MMC_RSP_PRESENT|MMC_RSP_CRC|MMC_RSP_OPCODE|MMC_RSP_BUSY)
-#define MMC_RSP_SPI_R1		(MMC_RSP_SPI_S1)
-#define MMC_RSP_SPI_R1B		(MMC_RSP_SPI_S1|MMC_RSP_SPI_BUSY)
+#define MMC_RESPONSE_SPI_S1		MMC_RESPONSE_BIT(7)
+#define MMC_RESPONSE_SPI_BUSY	MMC_RESPONSE_BIT(10)
+#define MMC_RESPONSE_SPI_R1B	(MMC_RESPONSE_SPI_S1 | MMC_RESPONSE_SPI_BUSY)
 
 /*
 ** OCR Register constants
