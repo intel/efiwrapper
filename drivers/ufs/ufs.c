@@ -31,6 +31,8 @@
 #include "ScsiPassThruExt.h"
 #include "UfsBlockIoLib.h"
 
+const EFI_LBA UFS_BLOCK_MAX = 0xffff;
+
 static struct supported_device {
 	u16 vid;
 	u16 did;
@@ -60,7 +62,7 @@ static EFI_STATUS _init(storage_t *s)
 
 	ret = UfsGetMediaInfo(DEVICE_INDEX_DEFAULT, &BlockInfo);
 	if (EFI_ERROR(ret)) {
-		DEBUG_UFS ((EFI_D_VERBOSE, "MmcGetMediaInfo Error %d\n",ret));
+		DEBUG_UFS((EFI_D_VERBOSE, "MmcGetMediaInfo Error %d\n", ret));
 		return ret;
 	}
 
@@ -90,17 +92,25 @@ static EFI_LBA _read(storage_t *s, EFI_LBA start, EFI_LBA count, void *buf)
  /* Need to implement it in ufs driver*/
 static EFI_LBA _write(storage_t *s, EFI_LBA start, EFI_LBA count, const void *buf)
 {
+	EFI_LBA cur_count, transfered = 0;
 	EFI_STATUS ret;
 
-	ret = UfsWriteBlocks (
-		DEVICE_INDEX_DEFAULT,
-		start,
-		s->blk_sz * count,
-		(void *)buf);
-	if (!EFI_ERROR(ret))
-		return count;
-	else
-		return 0;
+	do {
+		cur_count = count > UFS_BLOCK_MAX ? UFS_BLOCK_MAX : count;
+		ret = UfsWriteBlocks (
+			DEVICE_INDEX_DEFAULT,
+			start,
+			s->blk_sz * cur_count,
+			(void *)buf);
+		if (EFI_ERROR(ret))
+			break;
+		start += cur_count;
+		buf += cur_count * s->blk_sz;
+		count -= cur_count;
+		transfered += cur_count;
+	} while (count > 0);
+
+	return transfered;
 }
 
 static storage_t storage_ufs_storage = {
@@ -120,7 +130,7 @@ static EFI_STATUS storage_ufs_init(EFI_SYSTEM_TABLE *st)
 	EFI_STATUS ret;
 	UFS_PEIM_HC_PRIVATE_DATA *Private;
 	boot_dev_t *boot_dev;
-	static EFI_EXT_SCSI_PASS_THRU_MODE mode ={
+	static EFI_EXT_SCSI_PASS_THRU_MODE mode = {
 		0xFFFFFFFF,
 		EFI_EXT_SCSI_PASS_THRU_ATTRIBUTES_PHYSICAL | EFI_EXT_SCSI_PASS_THRU_ATTRIBUTES_LOGICAL,
 		sizeof(UINTN)

@@ -17,6 +17,16 @@
 #include <pci.h>
 #include "UfsInternal.h"
 #include "ScsiPassThruExt.h"
+#define  SIZE_1KB    0x00000400
+#define  SIZE_2KB    0x00000800
+#define  SIZE_4KB    0x00001000
+#define  SIZE_8KB    0x00002000
+#define  SIZE_16KB   0x00004000
+#define  SIZE_32KB   0x00008000
+#define  SIZE_64KB   0x00010000
+#define  SIZE_128KB  0x00020000
+#define  SIZE_256KB  0x00040000
+#define  SIZE_512KB  0x00080000
 
 typedef struct {
 	UINT64   BlockNum;

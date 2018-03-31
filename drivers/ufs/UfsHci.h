@@ -95,6 +95,8 @@
 #define UFS_HC_HCE_EN              BIT0
 #define UFS_HC_HCS_DP              BIT0
 #define UFS_HC_HCS_UCRDY           BIT3
+#define UFS_HC_IS_UE               BIT2
+#define UFS_HC_IS_UPMS             BIT4
 #define UFS_HC_IS_ULSS             BIT8
 #define UFS_HC_IS_UCCS             BIT10
 #define UFS_HC_CAP_64ADDR          BIT24

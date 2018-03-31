@@ -60,11 +60,11 @@
 #define UFS_WLUN_PREFIX             0xC1
 #define DEVICE_INDEX_DEFAULT  0
 
-#define UFS_TIMEOUT                 ((UINT64)(3) * 10000000)
+#define UFS_TIMEOUT                 MultU64x32((UINT64)(3), 10000000)
 
 #define ROUNDUP8(x) (((x) % 8 == 0) ? (x) : ((x) / 8 + 1) * 8)
 
-#define IS_ALIGNED(addr, size)      (((UINTN) (addr) & (size - 1)) == 0)
+#define IS_ALIGN(addr, size)      (((UINTN) (addr) & (size - 1)) == 0)
 
 #define EFI_PAGES_TO_SIZE(a)   ((a) << EFI_PAGE_SHIFT)
 
@@ -75,7 +75,22 @@
 #define EFI_D_VERBOSE "UFS Debug: "
 #define UNUSED_PARAM        __attribute__((__unused__))
 
+#ifdef DISABLE_DEBUG_PRINT
+#define DEBUG_MESSAGES 0
+#else
+#ifdef USER
+#define DEBUG_MESSAGES 0
+#else
+#define DEBUG_MESSAGES 1
+#endif
+#endif
+
+#if DEBUG_MESSAGES
 #define ufs_dbg(a, ...) {printf(a); printf(__VA_ARGS__); }
+#else
+#define ufs_dbg(a, ...) (void)0
+#endif
+
 #define DEBUG_UFS(a) (ufs_dbg a)
 
 typedef struct {
