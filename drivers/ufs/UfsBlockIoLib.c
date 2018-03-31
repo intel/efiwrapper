@@ -848,8 +848,7 @@ UfsGetMediaInfoInternal(
 
 **/
 EFI_STATUS
-EFIAPI
-UfsReadBlocks(
+UfsReadBlocksInternal(
 	IN  UINTN                          DeviceIndex,
 	IN  EFI_LBA                        StartLBA,
 	IN  UINTN                          BufferSize,
@@ -915,7 +914,7 @@ UfsReadBlocks(
 					&SenseData,
 					&SenseDataLength
 					);
-		if (!EFI_ERROR (Status)) {
+		if (!EFI_ERROR(Status)) {
 			break;
 		}
 
@@ -924,7 +923,7 @@ UfsReadBlocks(
 		}
 
 		Status = UfsParsingSenseKeys(&(Private->Media[DeviceIndex]), &SenseData, &NeedRetry);
-		if (EFI_ERROR (Status)) {
+		if (EFI_ERROR(Status)) {
 			return EFI_DEVICE_ERROR;
 		}
 
@@ -954,6 +953,74 @@ UfsReadBlocks(
 					&SenseDataLength
 					);
 	}
+	return Status;
+}
+
+/**
+  Reads the requested number of blocks from the specified block device.
+
+  The function reads the requested number of blocks from the device. All the
+  blocks are read, or an error is returned. If there is no media in the device,
+  the function returns EFI_NO_MEDIA.
+
+  @param[in]  DeviceIndex   Specifies the block device to which the function wants
+                            to talk. Because the driver that implements Block I/O
+                            PPIs will manage multiple block devices, PPIs that
+                            want to talk to a single device must specify the device
+                            index that was assigned during the enumeration process.
+                            This index is a number from one to NumberBlockDevices.
+  @param[in]  StartLBA      The starting logical block address (LBA) to read from
+                            on the device
+  @param[in]  BufferSize    The size of the Buffer in bytes. This number must be
+                            a multiple of the intrinsic block size of the device.
+  @param[out] Buffer        A pointer to the destination buffer for the data.
+                            The caller is responsible for the ownership of the
+                            buffer.
+
+  @retval EFI_SUCCESS             The data was read correctly from the device.
+  @retval EFI_DEVICE_ERROR        The device reported an error while attempting
+                                  to perform the read operation.
+  @retval EFI_INVALID_PARAMETER   The read request contains LBAs that are not
+                                  valid, or the buffer is not properly aligned.
+  @retval EFI_NO_MEDIA            There is no media in the device.
+  @retval EFI_BAD_BUFFER_SIZE     The BufferSize parameter is not a multiple of
+                                  the intrinsic block size of the device.
+
+**/
+EFI_STATUS
+EFIAPI
+UfsReadBlocks(
+	IN  UINTN                          DeviceIndex,
+	IN  EFI_LBA                        StartLba,
+	IN  UINTN                          BufferSize,
+	OUT VOID                           *Buffer
+	)
+{
+	EFI_STATUS                         Status;
+	UINT32                             ReadSize;
+	UINT32                             ReadBlockSize;
+	EFI_LBA                            LbaAddress;
+
+	Status = EFI_SUCCESS;
+	ReadSize = 0;
+	LbaAddress = StartLba;
+	while (ReadSize < BufferSize) {
+		if (ReadSize + SIZE_64KB > BufferSize) {
+			ReadBlockSize = BufferSize - ReadSize;
+		} else {
+			ReadBlockSize = SIZE_64KB;
+		}
+
+		Status = UfsReadBlocksInternal(DeviceIndex, LbaAddress, ReadBlockSize, (UINT8 *)Buffer + ReadSize);
+		if (EFI_ERROR(Status)) {
+			DEBUG_UFS((EFI_D_VERBOSE, "UfsReadBlocks_internal: Status = %d\n", Status));
+			DEBUG_UFS((EFI_D_VERBOSE, "EFI_TIMEOUT = %d\n", EFI_TIMEOUT));
+			break;
+		}
+		ReadSize += ReadBlockSize;
+		LbaAddress += ReadBlockSize / SIZE_4KB;
+	}
+
 	return Status;
 }
 
@@ -1107,7 +1174,7 @@ UfsWriteBlocks(
 	UINT8                              SenseDataLength;
 	BOOLEAN                            NeedRetry;
 
-	DEBUG((DEBUG_INFO, "UfsWriteBlocks. DeviceIndex = %x\n", DeviceIndex));
+	DEBUG_UFS((EFI_D_VERBOSE, "UfsWriteBlocks. DeviceIndex = %x\n", DeviceIndex));
 
 	Private = UfsGetPrivateData();
 	if (Private == NULL)
@@ -1295,7 +1362,7 @@ InitializeUfs(
 	Controller = 0;
 	MmioBase   = 0;
 
-	while(TRUE) {
+	while (TRUE) {
 		Status = GetUfsHcMmioBar(UfsPrivateHcData, Controller, &MmioBase);
 		//
 		// When status is error, meant no controller is found
@@ -1347,7 +1414,7 @@ InitializeUfs(
 		// The host enables the device initialization completion by setting fDeviceInit flag.
 		//
 		Status = UfsSetFlag(Private, UfsFlagDevInit);
-		if (EFI_ERROR (Status)) {
+		if (EFI_ERROR(Status)) {
 			DEBUG_UFS((EFI_D_VERBOSE, "Ufs Set fDeviceInit Flag Error, Status = %d\n", Status));
 			Controller++;
 			continue;
@@ -1415,15 +1482,15 @@ UfsPassThruPassThru(
 		return EFI_INVALID_PARAMETER;
 	}
 
-	if ((This->Mode->IoAlign > 1) && !IS_ALIGNED(Packet->InDataBuffer, This->Mode->IoAlign)) {
+	if ((This->Mode->IoAlign > 1) && !IS_ALIGN(Packet->InDataBuffer, This->Mode->IoAlign)) {
 		return EFI_INVALID_PARAMETER;
 	}
 
-	if ((This->Mode->IoAlign > 1) && !IS_ALIGNED(Packet->OutDataBuffer, This->Mode->IoAlign)) {
+	if ((This->Mode->IoAlign > 1) && !IS_ALIGN(Packet->OutDataBuffer, This->Mode->IoAlign)) {
 		return EFI_INVALID_PARAMETER;
 	}
 
-	if ((This->Mode->IoAlign > 1) && !IS_ALIGNED(Packet->SenseData, This->Mode->IoAlign)) {
+	if ((This->Mode->IoAlign > 1) && !IS_ALIGN(Packet->SenseData, This->Mode->IoAlign)) {
 		return EFI_INVALID_PARAMETER;
 	}
 
