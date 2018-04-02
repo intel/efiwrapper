@@ -61,6 +61,7 @@ static EFI_GUID dp_guid = DEVICE_PATH_PROTOCOL;
 
 #define ABL_BDEV "ABL.bdev"
 #define ABL_DISKBUS "ABL.diskbus"
+#define ABL_BDEVLIST "ABL.bootdevices"
 
 static boot_dev_t boot_dev = {
 	.type = STORAGE_EMMC,
@@ -74,6 +75,33 @@ struct storage_dp {
 	SCSI_DEVICE_PATH msg_device_path;
 	EFI_DEVICE_PATH end;
 } __attribute__((__packed__));
+
+typedef struct {
+	// Boot medium type, Refer OS_BOOT_MEDIUM_TYPE
+	UINT8	DevType;
+	//Zero-based hardware partition number
+	UINT8	HwPart;
+	//For PCI device, its value is 0x00BBDDFF
+	//For other device, its value is MMIO address.
+	UINT32	DevAddr;
+} __attribute__((__packed__)) OS_BOOT_DEVICE;
+
+typedef struct {
+	UINT8		Revision;
+	UINT8		BootDeviceCount;
+	OS_BOOT_DEVICE	BootDevice[0];
+}__attribute__((__packed__))  OS_BOOT_DEVICE_LIST;
+
+typedef enum {
+	OsBootDeviceSata,
+	OsBootDeviceSd,
+	OsBootDeviceEmmc,
+	OsBootDeviceUfs,
+	OsBootDeviceSpi,
+	OsBootDeviceUsb,
+	OsBootDeviceNvme,
+	OsBootDeviceMax
+} SBL_OS_BOOT_MEDIUM_TYPE;
 
 static EFI_STATUS dp_init(EFI_SYSTEM_TABLE *st, media_t *media,
 			  EFI_HANDLE *handle)
@@ -193,6 +221,64 @@ EFI_STATUS storage_free(EFI_SYSTEM_TABLE *st, EFI_HANDLE handle)
 	return EFI_SUCCESS;
 }
 
+static enum storage_type convert_sbl_dev_type(SBL_OS_BOOT_MEDIUM_TYPE type)
+{
+	switch(type) {
+		case OsBootDeviceUfs:
+			return STORAGE_UFS;
+		case OsBootDeviceSata:
+			return STORAGE_SATA;
+		case OsBootDeviceNvme:
+			return STORAGE_NVME;
+		default:
+			return STORAGE_EMMC;
+	}
+}
+
+EFI_STATUS identify_flash_media(boot_dev_t* pdev)
+{
+	const char *val;
+	OS_BOOT_DEVICE_LIST* plist;
+	SBL_OS_BOOT_MEDIUM_TYPE type;
+
+	ewdbg("identify_flash_media");
+	val = ewarg_getval(ABL_BDEVLIST);
+	if (!val) {
+		ewdbg("No devlist, select default");
+		return EFI_SUCCESS;
+	}
+
+	plist = (OS_BOOT_DEVICE_LIST*)(UINTN)strtoull(val, NULL, 16);
+
+	if(plist->BootDeviceCount < 1)  {
+		ewdbg("devlist count < 1, select default");
+		return EFI_SUCCESS;
+	}
+
+	type = (SBL_OS_BOOT_MEDIUM_TYPE)(plist->BootDevice[0].DevType);
+
+	if (type != OsBootDeviceSpi) {
+		ewdbg("Select 1st boot dev");
+		pdev->type = convert_sbl_dev_type(type);
+		pdev->diskbus = plist->BootDevice[0].DevAddr;
+		return EFI_SUCCESS;
+	}
+
+	//1st boot dev is SPI, check 2nd dev instead...
+
+	if(plist->BootDeviceCount < 2)  {
+		ewdbg("devlist count < 2, select default");
+		return EFI_SUCCESS;
+	}
+
+	ewdbg("Select 2nd boot dev");
+	type = (SBL_OS_BOOT_MEDIUM_TYPE)(plist->BootDevice[1].DevType);
+	pdev->type = convert_sbl_dev_type(type);
+	pdev->diskbus = plist->BootDevice[1].DevAddr;
+
+	return EFI_SUCCESS;
+}
+
 EFI_STATUS identify_boot_media()
 {
 	const char *val;
@@ -211,6 +297,12 @@ EFI_STATUS identify_boot_media()
 		boot_dev.type = STORAGE_NVME;
 	else if (!strncmp(val, "VIRTUAL", len))
 		boot_dev.type = STORAGE_VIRTUAL;
+	else if (!strncmp(val, "SPI", len)) //Fastboot case
+		identify_flash_media(&boot_dev);
+
+	//if diskbus is already get from boot option list
+	if (boot_dev.diskbus != 0)
+		return EFI_SUCCESS;
 
 	val = ewarg_getval(ABL_DISKBUS);
 	if (!val)
