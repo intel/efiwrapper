@@ -23,7 +23,7 @@
 #include <efilink.h>
 #include <efidef.h>
 
-#include "VirtioBlkCommon.h"
+#include "VirtioDeviceCommon.h"
 #include "VirtioPciDevice.h"
 
 /**

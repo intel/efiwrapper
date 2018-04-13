@@ -28,6 +28,7 @@ typedef struct {
 	VIRTIO_DEVICE_PROTOCOL VirtioDevice;
 	UINT64                             OriginalPciAttributes;
 	UINT32                             DeviceSpecificConfigurationOffset;
+	UINTN mPciBase;
 } VIRTIO_PCI_DEVICE;
 
 #define VIRTIO_PCI_DEVICE_FROM_VIRTIO_DEVICE(Device) \

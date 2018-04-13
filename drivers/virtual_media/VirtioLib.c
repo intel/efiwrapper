@@ -23,7 +23,7 @@
 #include <efilib.h>
 #include <efidef.h>
 
-#include "VirtioBlkCommon.h"
+#include "VirtioDeviceCommon.h"
 #include "VirtioLib.h"
 
 #define ALIGN_VALUE(Value, Alignment)	((Value) + (((Alignment) - (Value)) & ((Alignment) - 1)))
