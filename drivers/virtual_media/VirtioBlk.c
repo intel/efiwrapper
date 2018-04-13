@@ -29,7 +29,7 @@
 #include <ewlib.h>
 #include <efilib.h>
 
-#include "VirtioBlkCommon.h"
+#include "VirtioDeviceCommon.h"
 #include "VirtioBlk.h"
 #include "VirtioLib.h"
 #include "VirtioBlkDevice.h"
