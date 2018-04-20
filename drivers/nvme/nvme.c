@@ -134,8 +134,8 @@ static EFI_STATUS nvme_drv_init(EFI_SYSTEM_TABLE *st)
 	if (boot_dev->type != STORAGE_NVME)
 		return EFI_SUCCESS;
 
-	nvme_storage.pci_device = (boot_dev->diskbus >> 8) & 0xff;
-	nvme_storage.pci_function = boot_dev->diskbus & 0xff;
+	nvme_storage.pci_device = (NVME_DISKBUS >> 8) & 0xff;
+	nvme_storage.pci_function = NVME_DISKBUS & 0xff;
 	ret = storage_init(st, &nvme_storage, &nvme_handle);
 	if (EFI_ERROR(ret))
 		return ret;

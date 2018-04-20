@@ -40,6 +40,10 @@
 /* UFS */
 #define UFS_PCI_DID    0xA0FA
 
+/* NVME */
+#define NVME_PCI_DID    0x0953
+#define NVME_DISKBUS    0x1C04
+
 /* serial port base address */
 #ifndef EFIWRAPPER_USE_EC_UART
 #define SERIAL_PCI_DID        0xA0c7
