@@ -48,6 +48,7 @@
 
 /* PCI device id of NVME */
 #define NVME_PCI_DID 	0xF1A5
+#define NVME_DISKBUS	0x1D00
 
 #endif /* __HW_KABYLAKE__ */
 

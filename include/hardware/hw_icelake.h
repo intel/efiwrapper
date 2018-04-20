@@ -40,6 +40,10 @@
 /* UFS */
 #define UFS_PCI_DID    0x34FA
 
+/* NVME: not enable on ICL and as temporary variable*/
+#define NVME_PCI_DID    0xFFFF
+#define NVME_DISKBUS    0xFFFF
+
 /* serial port base address */
 #ifndef EFIWRAPPER_USE_EC_UART
 #define SERIAL_PCI_DID        0x34c7
