@@ -50,5 +50,7 @@
 #define HW_SERIAL_REG_WIDTH   4
 #endif
 
+#define SERIAL_IOC_PCI_DID    0x5abe
+
 #endif /* __HW_BROXTON__ */
 
