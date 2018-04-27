@@ -54,5 +54,7 @@
 
 #endif /* EFIWRAPPER_USE_EC_UART */
 
+#define SERIAL_IOC_PCI_DID    0x34a9
+
 #endif /* __HW_ICELAKE__ */
 

@@ -35,6 +35,8 @@
 #include <libpayload-config.h>
 #include <libpayload.h>
 #include <interface.h>
+#include <hwconfig.h>
+#include <pci/pci.h>
 
 #include "ioc_uart/ioc_uart.h"
 #include "ioc_uart/ioc_uart_protocol.h"
@@ -198,13 +200,13 @@ typedef enum configure_shutdown_behaviour {
 typedef volatile union _pci_config_space *pci_device_t;
 extern size_t str16len(const CHAR16 *str);
 
-static const struct _device_params
+static struct _device_params
 {
-	pci_device_t      cfg;	/* PCI device (configuration space) */
+	pcidev_t          cfg;	/* PCI device (configuration space) */
 	unsigned char     cfio_group;	/* CFIO community */
 	unsigned short    cfio_offset;	/* Rx .DW0 register offset (.DW1, Tx .DW0, .DW1 follow) */
 	unsigned int      cfio_values[4];	/* to configure Rx+Tx DW0+DW1 */
-} device_params = {BDF_(0,24,1), NORTH, GPIO_PADBAR+0x0150, { 0x44000702, 0x304b, 0x44000700, 0x304c}};
+} device_params = {0, NORTH, GPIO_PADBAR+0x0150, { 0x44000702, 0x304b, 0x44000700, 0x304c}};
 
 static unsigned int msgbus32(unsigned int port, unsigned int reg)
 {
@@ -218,20 +220,23 @@ static void msgbus32_set(unsigned int port, unsigned int reg, unsigned int val)
 
 static void init_uart_ioc(unsigned int saved[7])
 {
-	const struct _device_params *p = &device_params;
+	struct _device_params *p = &device_params;
 	unsigned int i;
 	unsigned int lcr = 0;
 	unsigned int divisor;
+
+	if (p->cfg == 0)
+		pci_find_device(PCI_VENDOR_ID_INTEL, SERIAL_IOC_PCI_DID, &p->cfg);
 
 	for (i = 0 ; i < 4 ; i += 1) {
 		saved[i] = msgbus32(p->cfio_group, p->cfio_offset + 4 * i);
 		msgbus32_set(p->cfio_group, p->cfio_offset + 4 * i, p->cfio_values[i]);
 	}
 
-	saved[4] = read32((void *)(UINTN)((UINTN)p->cfg + 0x10));
-	saved[5] = read16((void *)(UINTN)((UINTN)p->cfg + 0x4));
+	saved[4] = pci_read_config32(p->cfg, PCI_BASE_ADDRESS_0);
+	saved[5] = pci_read_config16(p->cfg, PCI_COMMAND);
 
-	uart_base_addr = read32((void *)(UINTN)((UINTN)p->cfg + 0x10)) & ~0xf;
+	uart_base_addr = pci_read_config32(p->cfg, PCI_BASE_ADDRESS_0) & PCI_BASE_ADDRESS_MEM_MASK;
 
 	/* Take the UART out of reset, then update and enable the (M,N) clock divider. */
 	write8((void *)(UINTN)(uart_base_addr + R_UART_RESETS), 0x00);
@@ -253,7 +258,7 @@ static void init_uart_ioc(unsigned int saved[7])
 	write8((void *)(UINTN)(uart_base_addr + R_UART_LCR), lcr);
 
 	/* enable & reset (receive and transmit) FIFO */
-	write8((void *)(UINTN)(uart_base_addr + R_UART_MCR), B_UART_MCR_AFC);
+	write8((void *)(UINTN)(uart_base_addr + R_UART_FCR), 0);
 	write8((void *)(UINTN)(uart_base_addr + R_UART_FCR), (B_UARY_FCR_TRFIFIE | B_UARY_FCR_RESETRF | B_UARY_FCR_RESETTF));
 }
 
@@ -262,8 +267,11 @@ static void init_uart_ioc(unsigned int saved[7])
 */
 static void ioc_uart_restore_device(unsigned int saved[7])
 {
-	const struct _device_params *p = &device_params;
+	struct _device_params *p = &device_params;
 	unsigned int to, i;
+
+	if (p->cfg == 0)
+		pci_find_device(PCI_VENDOR_ID_INTEL, SERIAL_IOC_PCI_DID, &p->cfg);
 
 	/* Wait until the transmit FIFO is empty (ensure that they got our ACK) */
 	while ((read8((void *)(UINTN)(uart_base_addr + R_UART_LSR)) & B_UART_LSR_TEMT) == 0)
@@ -273,8 +281,8 @@ static void ioc_uart_restore_device(unsigned int saved[7])
 	write32((void *)(UINTN)(uart_base_addr + R_UART_CLOCKS), saved[6]);
 
 	/* Restore PCI configuration space registers */
-	write32((void *)(UINTN)((UINTN)p->cfg + 0x10), saved[4]);
-	write16((void *)(UINTN)((UINTN)p->cfg + 0x4), saved[5]);
+	pci_write_config32(p->cfg, PCI_BASE_ADDRESS_0, saved[4]);
+	pci_write_config16(p->cfg, PCI_COMMAND, saved[5]);
 
 	/* Wait a few milliconds before returning the CFIO pins to their
 	original state; this avoids sending them a BREAK (i.e. an error)
