@@ -793,6 +793,15 @@ _usb_init_xdci(EFI_USB_DEVICE_MODE_PROTOCOL *This)
 	uint32_t addr, pci_command;
 	pcidev_t pci_dev;
 
+#if defined(FB_SET_USB_DEVICE_MODE)
+        /*need to set device mode in fastboot,p2sb pci is hide, access base address directly*/
+	uint32_t value;
+
+	value = *(uint32_t *)(P2SB_BASE_ADDR|USB_DAP_COMM_CTRL_REG_OFFSET);
+	*(uint32_t *)(P2SB_BASE_ADDR|USB_DAP_COMM_CTRL_REG_OFFSET) = value | 0x01000000;
+	value = *(uint32_t *)(P2SB_BASE_ADDR|USB_DAP_USB2_CTRL0_REG_OFFSET);
+	*(uint32_t *)(P2SB_BASE_ADDR|USB_DAP_USB2_CTRL0_REG_OFFSET) = value | 0x00000160;
+#endif
 	/* actually not used, could stay NULL */
 	device_core_ptr = (void *) This;
 

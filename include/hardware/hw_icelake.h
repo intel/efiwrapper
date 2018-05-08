@@ -31,8 +31,15 @@
 #define __HW_ICELAKE__
 
 /* PCI device id of OTG */
-#define XDCI_PID         0x9D30
-#define XHCI_PID         0x9D2F
+#define XDCI_PID         0x34EE
+#define XHCI_PID         0x34ED
+
+#define FB_SET_USB_DEVICE_MODE
+#define P2SB_BASE_ADDR                 0xFD000000
+#define USB_DAP_COMM_CTRL_REG_OFFSET   0x700440
+#define USB_DAP_USB2_CTRL0_REG_OFFSET  0x700550
+/*MRB type-c:0x700550; type-a:0x700510; RVP type-a:0x700580*/
+
 
 /* PCI device id of EMMC controller */
 #define EMMC_DEVICEID    0x34C4
