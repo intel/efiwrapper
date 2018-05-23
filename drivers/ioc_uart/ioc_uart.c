@@ -621,7 +621,9 @@ void receive_frame(ias_frame *frame, unsigned char skip_frame_counter)
 	ioc_uart_recv(&frame->payload_length, 1);
 	ioc_uart_recv(&frame->command, 1);
 
-	ioc_uart_recv(frame->content, frame->payload_length);
+	if (frame->payload_length != 0)
+		ioc_uart_recv(frame->content, frame->payload_length);
+
 	ioc_uart_recv((unsigned char *) &frame->checksum, 1);
 	frame->checksum <<= 8;
 	ioc_uart_recv((unsigned char *) &frame->checksum, 1);
