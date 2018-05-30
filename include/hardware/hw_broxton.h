@@ -38,6 +38,9 @@
 #define EMMC_DEVICEID      0x5acc
 /* UFS is not enabled on BXT, hence set it as default value*/
 #define UFS_PCI_DID    0x0000
+/* NVME is not enabled on BXT, hence set it as default value*/
+#define NVME_PCI_DID    0x0000
+#define NVME_DISKBUS    0x0000
 
 #ifdef EFIWRAPPER_USE_EC_UART
 #define SERIAL_BASEADDR       0x3f8
