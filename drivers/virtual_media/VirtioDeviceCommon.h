@@ -12,8 +12,8 @@
 **/
 
 
-#ifndef __VIRTIO_BLK_COMMON_H__
-#define __VIRTIO_BLK_COMMON_H__
+#ifndef __VIRTIO_DEVICE_COMMON_H__
+#define __VIRTIO_DEVICE_COMMON_H__
 
 #include <assert.h>
 

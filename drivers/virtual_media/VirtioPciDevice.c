@@ -24,7 +24,7 @@
 #include <efilib.h>
 #include <pci.h>
 
-#include "VirtioBlkCommon.h"
+#include "VirtioDeviceCommon.h"
 #include "VirtioPciDevice.h"
 
 static VIRTIO_DEVICE_PROTOCOL mDeviceProtocolTemplate = {
@@ -48,8 +48,6 @@ static VIRTIO_DEVICE_PROTOCOL mDeviceProtocolTemplate = {
 	VirtioPciMapSharedBuffer,	// MapSharedBuffer
 	VirtioPciUnmapSharedBuffer,	// UnmapSharedBuffer
 };
-
-static UINTN mPciBase;
 
 /**
 
@@ -76,7 +74,7 @@ static UINTN mPciBase;
 EFI_STATUS
 EFIAPI
 VirtioPciIoRead (
-	IN  __attribute__((unused)) VIRTIO_PCI_DEVICE         *Dev,
+	IN  VIRTIO_PCI_DEVICE         *Dev,
 	IN  UINTN                     FieldOffset,
 	IN  UINTN                     FieldSize,
 	IN  __attribute__((unused)) UINTN                     BufferSize,
@@ -88,13 +86,13 @@ VirtioPciIoRead (
 	switch (FieldSize) {
 	case 1:
 		//*((u8*)Buffer) = inb(mPciBase + FieldOffset);
-		__asm__ __volatile__("inb %w1, %b0" : "=a"(*((UINT8*)Buffer)) : "Nd"((UINT16)(mPciBase + FieldOffset)));
+		__asm__ __volatile__("inb %w1, %b0" : "=a"(*((UINT8*)Buffer)) : "Nd"((UINT16)(Dev->mPciBase + FieldOffset)));
 		//DEBUG ((DEBUG_INFO, "VirtioPciIoRead value8 = 0x%x\n", *((UINT8*)Buffer)));
 		break;
 
 	case 2:
 		//*((u16*)Buffer) = inw(mPciBase + FieldOffset);
-		__asm__ __volatile__("inw %w1, %w0" : "=a"(*((UINT16*)Buffer)) : "Nd"((UINT16)(mPciBase + FieldOffset)));
+		__asm__ __volatile__("inw %w1, %w0" : "=a"(*((UINT16*)Buffer)) : "Nd"((UINT16)(Dev->mPciBase + FieldOffset)));
 		//DEBUG ((DEBUG_INFO, "VirtioPciIoRead value16 = 0x%x\n", *((UINT16*)Buffer)));
 		break;
 
@@ -110,9 +108,9 @@ VirtioPciIoRead (
 	// some platforms, width requests of EfiPciIoWidthUint64 do not work.
 	//
 		//*((UINT32*)Buffer)= inl(mPciBase + FieldOffset);
-		__asm__ __volatile__("inl %w1, %0" : "=a"(*((UINT32*)Buffer)) : "Nd"((UINT16)(mPciBase + FieldOffset)));
+		__asm__ __volatile__("inl %w1, %0" : "=a"(*((UINT32*)Buffer)) : "Nd"((UINT16)(Dev->mPciBase + FieldOffset)));
 		//*((UINT32*)Buffer + 1)= inl(mPciBase + FieldOffset + sizeof (UINT32));
-		__asm__ __volatile__("inl %w1, %0" : "=a"(*((UINT32*)Buffer + 1)) : "Nd"((UINT16)(mPciBase + FieldOffset + sizeof (UINT32))));
+		__asm__ __volatile__("inl %w1, %0" : "=a"(*((UINT32*)Buffer + 1)) : "Nd"((UINT16)(Dev->mPciBase + FieldOffset + sizeof (UINT32))));
 		//DEBUG ((DEBUG_INFO, "VirtioPciIoRead value64_1 = 0x%x\n", *((UINT32*)Buffer)));
 		//DEBUG ((DEBUG_INFO, "VirtioPciIoRead value64_2 = 0x%x\n", *((UINT32*)Buffer + 1)));
 		break;
@@ -121,7 +119,7 @@ VirtioPciIoRead (
 	//
 	case 4:
 		//*((UINT32*)Buffer)= inl(mPciBase + FieldOffset);
-		__asm__ __volatile__("inl %w1, %0" : "=a"(*((UINT32*)Buffer)) : "Nd"((UINT16)(mPciBase + FieldOffset)));
+		__asm__ __volatile__("inl %w1, %0" : "=a"(*((UINT32*)Buffer)) : "Nd"((UINT16)(Dev->mPciBase + FieldOffset)));
 		//DEBUG ((DEBUG_INFO, "VirtioPciIoRead value32 = 0x%x\n", *((UINT32*)Buffer)));
 		break;
 
@@ -156,7 +154,7 @@ VirtioPciIoRead (
 EFI_STATUS
 EFIAPI
 VirtioPciIoWrite (
-	IN  __attribute__((unused)) VIRTIO_PCI_DEVICE         *Dev,
+	IN VIRTIO_PCI_DEVICE          *Dev,
 	IN UINTN                      FieldOffset,
 	IN UINTN                      FieldSize,
 	IN UINT64                     Value
@@ -168,12 +166,12 @@ VirtioPciIoWrite (
 	switch (FieldSize) {
 	case 1:
 		//outb (mPciBase + FieldOffset, (UINT8)Value);
-		 __asm__ __volatile__("outb %b0, %w1" : : "a"((UINT8)Value), "Nd"((UINT16)(mPciBase + FieldOffset)));
+		 __asm__ __volatile__("outb %b0, %w1" : : "a"((UINT8)Value), "Nd"((UINT16)(Dev->mPciBase + FieldOffset)));
 		break;
 
 	case 2:
 		//outw (mPciBase + FieldOffset, (UINT16)Value);
-		__asm__ __volatile__("outw %w0, %w1" : : "a"((UINT16)Value), "Nd"((UINT16)(mPciBase + FieldOffset)));
+		__asm__ __volatile__("outw %w0, %w1" : : "a"((UINT16)Value), "Nd"((UINT16)(Dev->mPciBase + FieldOffset)));
 		break;
 
 	case 8:
@@ -188,9 +186,9 @@ VirtioPciIoWrite (
 		// some platforms, width requests of EfiPciIoWidthUint64 do not work
 		//
 		//outl (mPciBase + FieldOffset, (UINT32)Value);
-		__asm__ __volatile__("outl %0, %w1" : : "a"((UINT32)Value), "Nd"((UINT16)(mPciBase + FieldOffset)));
+		__asm__ __volatile__("outl %0, %w1" : : "a"((UINT32)Value), "Nd"((UINT16)(Dev->mPciBase + FieldOffset)));
 		//outl (mPciBase + FieldOffset + sizeof (UINT32), (UINT32)(Value >> 32));
-		__asm__ __volatile__("outl %0, %w1" : : "a"((UINT32)(Value >> 32)), "Nd"((UINT16)(mPciBase + FieldOffset + sizeof (UINT32))));
+		__asm__ __volatile__("outl %0, %w1" : : "a"((UINT32)(Value >> 32)), "Nd"((UINT16)(Dev->mPciBase + FieldOffset + sizeof (UINT32))));
 		break;
 
 	//
@@ -198,7 +196,7 @@ VirtioPciIoWrite (
 	//
 	case 4:
 		//outl (mPciBase + FieldOffset, (UINT32)Value);
-		__asm__ __volatile__("outl %0, %w1" : : "a"((UINT32)Value), "Nd"((UINT16)(mPciBase + FieldOffset)));
+		__asm__ __volatile__("outl %0, %w1" : : "a"((UINT32)Value), "Nd"((UINT16)(Dev->mPciBase + FieldOffset)));
 		break;
 
 	default:
@@ -278,7 +276,7 @@ static UINT16 PciEnIo(UINTN base, UINT32 reg)
 EFI_STATUS
 EFIAPI
 VirtioPciInit (
-	IN OUT __attribute__((unused)) VIRTIO_PCI_DEVICE *Device,  IN UINTN PciBase
+	IN OUT  VIRTIO_PCI_DEVICE *Device,  IN UINTN PciBase
 	)
 {
 	PCI_TYPE00            Pci;
@@ -305,9 +303,9 @@ VirtioPciInit (
 		return EFI_UNSUPPORTED;
 	}
 
-	mPciBase =PciEnIo(PciBase, 0x10); //PCI_BASE_ADDRESS_0
-	DEBUG ((DEBUG_INFO, "ioaddr = 0x%x\n", (UINT32)mPciBase));
-	if (!mPciBase)
+	Device->mPciBase =PciEnIo(PciBase, 0x10); //PCI_BASE_ADDRESS_0
+	DEBUG ((DEBUG_INFO, "ioaddr = 0x%x\n", (UINT32)Device->mPciBase));
+	if (!Device->mPciBase)
 		return EFI_UNSUPPORTED;
 
 	CopyMem (&Device->VirtioDevice, &mDeviceProtocolTemplate,

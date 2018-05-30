@@ -17,7 +17,7 @@
 #include <libpayload.h>
 #include <ewlib.h>
 
-#include "VirtioBlkCommon.h"
+#include "VirtioDeviceCommon.h"
 #include "VirtioPciDeviceLib.h"
 #include "VirtioBlkDevice.h"
 
