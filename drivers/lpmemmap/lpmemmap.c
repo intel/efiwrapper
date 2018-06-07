@@ -302,7 +302,6 @@ static EFIAPI EFI_STATUS allocate_pages(EFI_ALLOCATE_TYPE Type,
 	if (Type == AllocateMaxAddress)
 		max_address = start;
 
-
 	if ((max_address < EFI_PAGE_MASK))
 		return EFI_NOT_FOUND;
 
@@ -318,6 +317,13 @@ static EFIAPI EFI_STATUS allocate_pages(EFI_ALLOCATE_TYPE Type,
 		cur_start = efimemmap[i].PhysicalStart;
 		cur_end = cur_start + efimemmap[i].NumberOfPages * EFI_PAGE_SIZE;
 		cur_type = efimemmap[i].Type;
+
+		/* skip the E820 memory range from 0x00000000 to 0x00001000 as allocated address,
+		which would cause NULL pointer */
+		if (cur_start == 0x00000000) {
+			cur_start = 0x1000;
+			cur_end = cur_start + (efimemmap[i].NumberOfPages - 1) * EFI_PAGE_SIZE;
+		}
 
 		if (efimemmap[i].Type != EfiConventionalMemory)
 			continue;
