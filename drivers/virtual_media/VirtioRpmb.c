@@ -42,7 +42,7 @@ VirtioRpmbAddVirtqueue (
 	DESC_INDICES            Indices;
 	VOID                    *BufferMapping;
 	EFI_PHYSICAL_ADDRESS    BufferDeviceAddress;
-	BOOLEAN                 DataBufferIsMapped;
+	BOOLEAN                 DataBufferIsMapped = FALSE;
 	EFI_STATUS              Status = EFI_SUCCESS;
 
 	if(Dev == NULL || Buffer == NULL)
