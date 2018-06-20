@@ -64,8 +64,8 @@ static char CBC_NUMBER_SUS_STAT_TOGGLES_2_HALT[]	=	{0x05,0x00,0x0E,0x02,0x00,0x0
 static char CBC_NUMBER_SUS_STAT_TOGGLES_1_HALT[]	=	{0x05,0x00,0x0E,0x02,0x00,0x03,0x00,0xE8};
 static char CBC_NUMBER_SUS_STAT_TOGGLES_2_REBOOT[]	=	{0x05,0x00,0x0E,0x02,0x00,0x06,0x00,0xE5};
 static char CBC_NUMBER_SUS_STAT_TOGGLES_1_REBOOT[]	=	{0x05,0x00,0x0E,0x02,0x00,0x04,0x00,0xE7};
-//static char CBC_CONFIG_RESTART_SYSTEM[]	=	{0x05,0x00,0x0E,0x02,0x00,0x02,0x00,0xE9};
-//static char CBC_CONFIG_SHUTDOWN_SYSTEM[]	=	{0x05,0x00,0x0E,0x02,0x00,0x01,0x00,0xEA};
+static char CBC_CONFIG_RESTART_SYSTEM[]	=	{0x05,0x00,0x0E,0x02,0x00,0x02,0x00,0xE9};
+static char CBC_CONFIG_SHUTDOWN_SYSTEM[]	=	{0x05,0x00,0x0E,0x02,0x00,0x01,0x00,0xEA};
 static char CBC_ENTER_IOC_BOOTLOADER[]	=	{0x05,0x00,0x20,0x01,0x30,0x10,0x80,0x1a,
 						 0x05,0x00,0x20,0x01,0x30,0x10,0x80,0x11,
 						 0x05,0x00,0x20,0x01,0x30,0x10,0x80,0x1a,
@@ -452,17 +452,21 @@ set_ignore_sus_stat_toggles_shutdown_behaviour(EFI_IGNORE_SUS_STAT_TOGGLES num_i
 	init_uart_ioc(old_state);
 	switch (shutdown) {
 		case RESTART_SYSTEM:
-			if(IGNORE_SUS_STAT_2==num_ignore_sus_stat)
+			if(IGNORE_SUS_STAT_3 == num_ignore_sus_stat)
 				cbc_message_buf = CBC_NUMBER_SUS_STAT_TOGGLES_2_REBOOT;
-			else
+			else if(IGNORE_SUS_STAT_2 == num_ignore_sus_stat)
 				cbc_message_buf = CBC_NUMBER_SUS_STAT_TOGGLES_1_REBOOT;
+			else
+				cbc_message_buf = CBC_CONFIG_RESTART_SYSTEM;
 			break;
 		case SHUTDOWN_SYSTEM:
 		default:
-			if(IGNORE_SUS_STAT_2==num_ignore_sus_stat)
+			if(IGNORE_SUS_STAT_3 == num_ignore_sus_stat)
 				cbc_message_buf = CBC_NUMBER_SUS_STAT_TOGGLES_2_HALT;
-			else
+			else if(IGNORE_SUS_STAT_2 == num_ignore_sus_stat)
 				cbc_message_buf = CBC_NUMBER_SUS_STAT_TOGGLES_1_HALT;
+			else
+				cbc_message_buf = CBC_CONFIG_SHUTDOWN_SYSTEM;
 			break;
 	}
 
