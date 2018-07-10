@@ -37,10 +37,16 @@ static struct supported_device {
 	{ .vid = 0x8086, .did = 0x8601},
 };
 
+enum VIRTUAL_DEVICE {
+	VirtualMedia,
+	VirtualRpmb,
+	VirtualDeviceMax
+};
+
 static EFI_STATUS _init(storage_t *s)
 {
 	EFI_STATUS ret;
-	pcidev_t pci_dev[2] = {0};
+	pcidev_t pci_dev[VirtualDeviceMax] = {0};
 	size_t i;
 	DEVICE_BLOCK_INFO     BlockInfo ={0};
 
@@ -49,15 +55,15 @@ static EFI_STATUS _init(storage_t *s)
 				SUPPORTED_DEVICES[i].did,
 				&pci_dev[i]);
 
-	if (!pci_dev[0])
+	if (!pci_dev[VirtualMedia])
 		return EFI_UNSUPPORTED;
 
-	ret = VirtioMediaInitialize((UINTN)pci_dev[0]);
+	ret = VirtioMediaInitialize((UINTN)pci_dev[VirtualMedia]);
 	if (ret)
 		return EFI_DEVICE_ERROR;
 
-	if (pci_dev[1])
-		ret = VirtioRpmbInitialize((UINTN)pci_dev[1]);
+	if (pci_dev[VirtualRpmb])
+		ret = VirtioRpmbInitialize((UINTN)pci_dev[VirtualRpmb]);
 
 	ret = VirtioGetMediaInfo(DEVICE_INDEX_DEFAULT, &BlockInfo);
 	if (EFI_ERROR(ret)) {
