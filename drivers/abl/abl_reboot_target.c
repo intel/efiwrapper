@@ -83,6 +83,8 @@ static const struct name2id NAME2ID[] = {
 	{ L"boot",		0x00 },
 	{ L"bootloader",	0x01 },
 	{ L"fastboot",		0x01 },
+	{ L"recovery",		0x03 },
+	{ L"dnx",		0x05 },
 };
 
 static size_t offset; /* memorize offset between each call */
