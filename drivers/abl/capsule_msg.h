@@ -62,30 +62,49 @@ union _cdata_header {
 };
 
 #ifdef CAPSULE4SBL
-struct capsule_image_info {
-	uint64_t image_lba_addr;
-	uint32_t image_length;
-	uint32_t reserved;
-};
+/* SBL Conventions */
+#define SIGNATURE_16(A, B)              ((A) | (B << 8))
+#define SIGNATURE_32(A, B, C, D)        (SIGNATURE_16 (A, B) | (SIGNATURE_16 (C, D) << 16))
+#define CFG_DATA_SIGNATURE              SIGNATURE_32('C', 'F', 'G', 'D')
+#define MAX_FILE_LEN                    16
+#define CDATA_CAPSULE_TAG               0xE00
+
+typedef struct cdata_cond {
+	uint32_t  Value;    // Bit masks on supported platforms
+} __attribute__((__packed__)) cdata_cond_t;
+
+typedef struct cdata_header {
+	uint32_t  ncond          :  2;      // [1:0]   #of condition words present
+	uint32_t  length         : 10;      // [11:2]  total size of item (in dwords)
+	uint32_t  flags          :  4;      // [15:12] unused/reserved so far
+	uint32_t  version        :  4;      // [19:16] item (payload) format version
+	uint32_t  tag            : 12;      // [31:20] identifies item (in payload)
+	struct cdata_cond        Condition;
+} __attribute__((__packed__)) cdata_header_t ;
+
+typedef struct cdata_blob {
+	uint32_t  Signature;
+	uint8_t   HeaderLength;
+	uint8_t   Attribute;
+	uint8_t   Reserved[2];
+	uint32_t  UsedLength;
+	uint32_t  TotalLength;
+} __attribute__((__packed__)) cdata_blob_t;
 
 typedef struct cse4sbl_capsule_cmd {
 	uint32_t dev_addr;
-	uint8_t dev_type;
-	uint8_t fs_type;
-	uint8_t hw_part;
-	uint8_t sw_part;
-	struct capsule_image_info file_path;
+	uint8_t  dev_type;
+	uint8_t  hw_part;
+	uint8_t  sw_part;
+	uint8_t  fs_type;
+	uint8_t  FileName[MAX_FILE_LEN];
+	uint32_t LbaAddr;
 } __attribute__((__packed__)) CSE_CMD;
 
 typedef struct cse4sbl_capsule_msg {
-	uint16_t magic;
-	uint16_t total_size;
-	char revision;
-	char check_sum;
-	char reserved[2];
-	union _cdata_header cdata_header;
-	char *cdata_payload;
-	uint32_t cdata_payload_size;
+	struct cdata_blob cdb;
+	struct cdata_header cdh;
+	struct cse4sbl_capsule_cmd cmd;
 } __attribute__((__packed__)) CSE_MSG;
 #else
 typedef struct cse4abl_capsule_cmd {
