@@ -186,34 +186,16 @@ typedef enum  {
 	EnumFileSystemMax
 } SBL_OS_FILE_SYSTEM_TYPE;
 
-static BOOLEAN capsule_request_slot_b;
-
 static EFI_STATUS cse4sbl_capsule_msg_write(CSE_MSG *msg)
 {
-	uint8_t *msg_buf, *msg_buf_p, msg_slen;
+	uint8_t *msg_buf;
 	unsigned status;
-
-	// It's temporary patch before SBL officially support HECI cmd trigger fw update"
-	outb(0x40, 0x70);
-	if (capsule_request_slot_b) {
-		ewdbg("%s: Capsule requested, set CMOS 0x5B value for ICL KBL hack",__func__);
-		outb(0x5B, 0x71);
-	} else {
-		ewdbg("%s: Capsule requested, set CMOS 0x5A value for ICL KBL hack",__func__);
-		outb(0x5A, 0x71);
-	}
-	return EFI_SUCCESS;
 
 	msg_buf = malloc(CSE_USRCMD_SIZE);
 	if (!msg_buf)
 		return EFI_OUT_OF_RESOURCES;
-	memset(msg_buf, 0, CSE_USRCMD_SIZE);
-	msg_buf_p = msg_buf;
 
-	msg_slen = offsetof(CSE_MSG, cdata_payload);
-	msg_buf_p = (uint8_t *)memcpy(msg_buf_p, (uint8_t *)msg, msg_slen) + msg_slen;
-	msg_slen = msg->cdata_payload_size;
-	msg_buf_p = (uint8_t *)memcpy(msg_buf_p, msg->cdata_payload, msg_slen) + msg_slen;
+	memcpy(msg_buf, (uint8_t *)msg, sizeof(CSE_MSG));
 
 	status = heci_send_user_command(msg_buf, CSE_USRCMD_SIZE);
 
@@ -241,10 +223,6 @@ static EFI_STATUS cse4sbl_capsule_cmd_create(CSE_CMD **cmd, size_t *cmd_size, co
 	ewdbg("capsule buffer: %s", buf); /* Buffer format example: "m1:@0" */
 
 	partition = buf[1] - '0';
-	if (partition == 2)
-		capsule_request_slot_b = TRUE;
-	else
-		capsule_request_slot_b = FALSE;
 	memset(name, 0, sizeof(name));
 	strncpy(name, buf + 3, sizeof(name) - 1); /* Number 3 is start index of name in buffer. */
 
@@ -263,56 +241,44 @@ static EFI_STATUS cse4sbl_capsule_cmd_create(CSE_CMD **cmd, size_t *cmd_size, co
 
 	(*cmd)->dev_addr = boot_dev->diskbus;
 	(*cmd)->dev_type = device_map[boot_dev->type];
-	(*cmd)->fs_type = (uint8_t)EnumFileSystemTypeAuto;
+	if (buf[0] == 'm')
+		(*cmd)->fs_type = EnumFileSystemMax;
+	else
+		(*cmd)->fs_type = EnumFileSystemTypeFat;
+
+	if (name[0] == '@')
+		(*cmd)->LbaAddr = strtoull(name+1, NULL, 0);
+	else {
+		memset((*cmd)->FileName, 0, MAX_FILE_LEN);
+		strncpy((char *)(*cmd)->FileName, name, MAX_FILE_LEN - 1);
+	}
+
 	(*cmd)->hw_part = 0;
 	(*cmd)->sw_part = partition;
-	(*cmd)->file_path.image_lba_addr = strtoull(name+1, NULL, 16);
-	(*cmd)->file_path.image_length = 0;
-	(*cmd)->file_path.reserved = 0;
 	return EFI_SUCCESS;
 }
 
-static int get_cse_msg_sum(CSE_MSG *msg, CSE_CMD *cmd, size_t cmd_size)
-{
-	size_t i = 0;
-	char *p = NULL, sum = 0;
-
-	p = (char *)msg;
-	for (i = 0; i < offsetof(CSE_MSG, cdata_payload); ++i)
-		sum += p[i];
-
-	sum -= msg->check_sum;
-
-	p = (char *)cmd;
-	for (i = 0; i < cmd_size; ++i)
-		sum += p[i];
-
-	return -sum;
-}
-
 /* If multiple payload is needed, the cmd and cmd_size could be changed to array */
-static EFI_STATUS cse4sbl_capsule_msg_create(CSE_MSG **msg, CSE_CMD *cmd, size_t cmd_size)
+static EFI_STATUS cse4sbl_capsule_msg_create(CSE_MSG **msg, CSE_CMD *cmd, __attribute__((__unused__)) size_t cmd_size)
 {
-	union _cdata_header cdh;
-
-	cdh.data = 0;
-	cdh.tag = CDATA_TAG_USER_CMD;
-	cdh.length = (sizeof(cdh) + cmd_size) / 4;
-
 	*msg = malloc(sizeof(CSE_MSG));
 	if (!(*msg))
 		return EFI_OUT_OF_RESOURCES;
 
-	(*msg)->magic = NVRAM_VALID_FLAG;
-	(*msg)->total_size = offsetof(CSE_MSG, cdata_payload) + cmd_size;
-	(*msg)->revision = 0;
-	(*msg)->check_sum = get_cse_msg_sum(*msg, cmd, cmd_size);
+	cdata_blob_t *cdb = &(*msg)->cdb;
+	cdb->Signature = CFG_DATA_SIGNATURE;
+	cdb->HeaderLength = sizeof(cdata_blob_t);
+	cdb->UsedLength = sizeof(CSE_MSG);
+	cdb->TotalLength = CSE_USRCMD_SIZE;
 
-	memset((*msg)->reserved, 0, 2);
+	cdata_header_t *cdh = &(*msg)->cdh;
+	cdh->ncond = 1;
+	cdh->length = sizeof(cdata_header_t) + sizeof(CSE_CMD);
+	cdh->version = 1;
+	cdh->tag = CDATA_CAPSULE_TAG;
+	cdh->Condition.Value = 0xFFFFFFFF;
 
-	(*msg)->cdata_header.data = cdh.data;
-	(*msg)->cdata_payload = (char *)cmd;
-	(*msg)->cdata_payload_size = cmd_size;
+	memcpy(&((*msg)->cmd), cmd, sizeof(CSE_CMD));
 
 	return EFI_SUCCESS;
 }
