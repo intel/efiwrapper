@@ -368,29 +368,31 @@ static uint16_t sdhci_make_cmd(struct cmd *c)
 }
 
 static void
+sdhci_wait_for_state_unset(struct sdhci *host, uint16_t bits, uint32_t timeout_us)
+{
+	uint16_t value;
+
+	do {
+		value = sdhci_read16(host, SDHCI_PRESENT_STATE);
+		if (!(value & bits))
+			break;
+		udelay(1);
+	} while (timeout_us-- > 0);
+
+	if (!timeout_us)
+		ewerr("%s() timeout for 0x%x", __func__, bits);
+}
+
+static void
 sdhci_send_cmd(struct mmc *m, struct cmd *c)
 {
 	struct sdhci *host = m->host;
 	uint16_t tmode = 0;
-	uint16_t Timeout;
-	uint32_t Data32;
 
-	Timeout = 10000;
-	do
-	{
-		Data32 = sdhci_read16 (host, SDHCI_PRESENT_STATE);
-		udelay(10);
-	} while ((Timeout-- > 0) && (Data32 & SDHCI_CMD_INHIBIT));
+	sdhci_wait_for_state_unset(host, SDHCI_CMD_INHIBIT, 100000);
 
-	if(c->index != CMD_MMC_SEND_TUNING_BLOCK_HS200)
-	{
-		Timeout = 90;
-		do
-		{
-			Data32 = sdhci_read16 (host, SDHCI_PRESENT_STATE);
-			mdelay(2);
-		} while ((Timeout-- > 0) && (Data32 & SDHCI_DATA_INHIBIT));
-	}
+	if (c->index != CMD_MMC_SEND_TUNING_BLOCK_HS200)
+		sdhci_wait_for_state_unset(host, SDHCI_DATA_INHIBIT, 180000);
 
 	/* clear irq_status/err_sts register */
 	sdhci_write32(host, SDHCI_INT_STATUS, 0xffffffff);
