@@ -92,17 +92,6 @@ typedef struct {
 	OS_BOOT_DEVICE	BootDevice[0];
 }__attribute__((__packed__))  OS_BOOT_DEVICE_LIST;
 
-typedef enum {
-	OsBootDeviceSata,
-	OsBootDeviceSd,
-	OsBootDeviceEmmc,
-	OsBootDeviceUfs,
-	OsBootDeviceSpi,
-	OsBootDeviceUsb,
-	OsBootDeviceNvme,
-	OsBootDeviceMax
-} SBL_OS_BOOT_MEDIUM_TYPE;
-
 static EFI_STATUS dp_init(EFI_SYSTEM_TABLE *st, media_t *media,
 			  EFI_HANDLE *handle)
 {
@@ -257,7 +246,7 @@ EFI_STATUS identify_flash_media(boot_dev_t* pdev)
 
 	type = (SBL_OS_BOOT_MEDIUM_TYPE)(plist->BootDevice[0].DevType);
 
-	if (type != OsBootDeviceSpi) {
+	if ((type != OsBootDeviceSpi) && (type != OsBootDeviceMemory)) {
 		ewdbg("Select 1st boot dev");
 		pdev->type = convert_sbl_dev_type(type);
 		pdev->diskbus = plist->BootDevice[0].DevAddr;
@@ -297,7 +286,7 @@ EFI_STATUS identify_boot_media()
 		boot_dev.type = STORAGE_NVME;
 	else if (!strncmp(val, "VIRTUAL", len))
 		boot_dev.type = STORAGE_VIRTUAL;
-	else if (!strncmp(val, "SPI", len)) //Fastboot case
+	else if ((!strncmp(val, "SPI", len)) || (!strncmp(val, "MEM", len))) //Fastboot case
 		identify_flash_media(&boot_dev);
 
 	//if diskbus is already get from boot option list

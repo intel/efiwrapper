@@ -168,17 +168,6 @@ static unsigned heci_send_user_command(uint8_t *data, uint8_t length)
 }
 
 #ifdef CAPSULE4SBL
-typedef enum {
-	OsBootDeviceSata,
-	OsBootDeviceSd,
-	OsBootDeviceEmmc,
-	OsBootDeviceUfs,
-	OsBootDeviceSpi,
-	OsBootDeviceUsb,
-	OsBootDeviceNvme,
-	OsBootDeviceMax
-} SBL_OS_BOOT_MEDIUM_TYPE;
-
 typedef enum  {
 	EnumFileSystemTypeFat,
 	EnumFileSystemTypeExt2,

@@ -58,6 +58,18 @@ enum storage_type {
 	STORAGE_ALL
 };
 
+typedef enum {
+	OsBootDeviceSata,
+	OsBootDeviceSd,
+	OsBootDeviceEmmc,
+	OsBootDeviceUfs,
+	OsBootDeviceSpi,
+	OsBootDeviceUsb,
+	OsBootDeviceNvme,
+	OsBootDeviceMemory,
+	OsBootDeviceMax
+} SBL_OS_BOOT_MEDIUM_TYPE;
+
 typedef struct boot_dev {
 	enum storage_type type;
 	UINT32 diskbus;
