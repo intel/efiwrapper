@@ -67,7 +67,7 @@ union _cdata_header {
 #define SIGNATURE_32(A, B, C, D)        (SIGNATURE_16 (A, B) | (SIGNATURE_16 (C, D) << 16))
 #define CFG_DATA_SIGNATURE              SIGNATURE_32('C', 'F', 'G', 'D')
 #define MAX_FILE_LEN                    16
-#define CDATA_CAPSULE_TAG               0xE00
+#define CDATA_CAPSULE_TAG               0x80
 
 typedef struct cdata_cond {
 	uint32_t  Value;    // Bit masks on supported platforms
