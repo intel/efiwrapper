@@ -77,6 +77,6 @@ struct rpmb_ioc_seq_cmd {
 	VIRTIO_RPMB_CMD cmds[0];
 };
 
-#define RPMB_IOC_SEQ_CMD 0xC008B551
+#define RPMB_IOC_SEQ_CMD 0xC008B552
 
 #endif // _VIRTIO_RPMB_H_
