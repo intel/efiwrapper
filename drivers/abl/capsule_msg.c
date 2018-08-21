@@ -184,6 +184,7 @@ static EFI_STATUS cse4sbl_capsule_msg_write(CSE_MSG *msg)
 	if (!msg_buf)
 		return EFI_OUT_OF_RESOURCES;
 
+	memset(msg_buf, 0, CSE_USRCMD_SIZE);
 	memcpy(msg_buf, (uint8_t *)msg, sizeof(CSE_MSG));
 
 	status = heci_send_user_command(msg_buf, CSE_USRCMD_SIZE);
@@ -228,6 +229,7 @@ static EFI_STATUS cse4sbl_capsule_cmd_create(CSE_CMD **cmd, size_t *cmd_size, co
 	if (!(*cmd))
 		return EFI_OUT_OF_RESOURCES;
 
+	memset(*cmd, 0, sizeof(CSE_CMD));
 	(*cmd)->dev_addr = boot_dev->diskbus;
 	(*cmd)->dev_type = device_map[boot_dev->type];
 	if (buf[0] == 'm')
@@ -254,6 +256,7 @@ static EFI_STATUS cse4sbl_capsule_msg_create(CSE_MSG **msg, CSE_CMD *cmd, __attr
 	if (!(*msg))
 		return EFI_OUT_OF_RESOURCES;
 
+	memset(*msg, 0, sizeof(CSE_MSG));
 	cdata_blob_t *cdb = &(*msg)->cdb;
 	cdb->Signature = CFG_DATA_SIGNATURE;
 	cdb->HeaderLength = sizeof(cdata_blob_t);
@@ -323,6 +326,7 @@ static EFI_STATUS cse4abl_capsule_cmd_create(CSE_CMD **cmd, size_t *cmd_size, co
 	if (!(*cmd))
 		return EFI_OUT_OF_RESOURCES;
 
+	memset(*cmd, 0, *cmd_size);
 	(*cmd)->action = USERCMD_UPDATE_IFWI(name_len + 2);
 	(*cmd)->device = device;
 	(*cmd)->partition = partition;
@@ -342,6 +346,7 @@ static EFI_STATUS cse4abl_capsule_msg_create(CSE_MSG **msg, CSE_CMD *cmd, size_t
 	if (!(*msg))
 		return EFI_OUT_OF_RESOURCES;
 
+	memset(*msg, 0, sizeof(CSE_MSG));
 	(*msg)->magic = NVRAM_VALID_FLAG;
 	(*msg)->size = offsetof(CSE_MSG, cdata_payload) + cmd_size + sizeof((*msg)->crc);
 	(*msg)->cdata_header.data = cdh.data;

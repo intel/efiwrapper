@@ -250,7 +250,6 @@ static int heci_send_impl(uint32_t u32HeciBase, uint32_t *Message, uint32_t Leng
 		ewdbg("heci Message Header: %08x\n", head.data);
 		heci_reg_write(u32HeciBase, H_CB_WW, head.data);
 		for (Index = 0; Index < Size; Index++) {
-			ewdbg("heci data[%x] = %08x\n", Index, Message[Index + WriteSize]);
 			heci_reg_write(u32HeciBase, H_CB_WW, Message[Index + WriteSize]);
 		}
 
@@ -464,6 +463,8 @@ static EFI_STATUS EFIAPI HeciSendwACK(
 	u32HeciBase = heci_get_base_addr();
 	if (u32HeciBase == 0)
 		return EFI_DEVICE_ERROR;
+
+	heci_reset_interface();
 
 	/* Send the message */
 	status = heci_send_impl(u32HeciBase, Message, Length, HostAddress, SECAddress);
