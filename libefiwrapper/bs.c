@@ -325,7 +325,7 @@ bs_create_event_ex(__attribute__((__unused__)) UINT32 Type,
 		   __attribute__((__unused__)) EFI_TPL NotifyTpl,
 		   __attribute__((__unused__)) EFI_EVENT_NOTIFY NotifyFunction,
 		   __attribute__((__unused__)) const VOID *NotifyContext,
-		   __attribute__((__unused__)) const EFI_GUID EventGroup,
+		   __attribute__((__unused__)) const EFI_GUID *EventGroup,
 		   __attribute__((__unused__)) EFI_EVENT *Event)
 {
 	return EFI_UNSUPPORTED;
