@@ -67,5 +67,8 @@
 
 #define SERIAL_IOC_PCI_DID    0x34a9
 
+/* TCO base address, to be determined */
+#define TCOBASE    (0xffffffff)
+
 #endif /* __HW_ICELAKE__ */
 

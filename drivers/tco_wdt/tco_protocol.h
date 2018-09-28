@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Intel Corporation
+ * Copyright (c) 2015, Intel Corporation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,33 +25,34 @@
  * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
  */
 
-#ifndef __HW_KABYLAKE__
-#define __HW_KABYLAKE__
+#ifndef _TCO_PROTOCOL_H_
+#define _TCO_PROTOCOL_H_
 
-/* PCI device id of OTG */
-#define XDCI_PID         0x9D30
-#define XHCI_PID         0x9D2F
+#include <efi.h>
 
-/* PCI device id of EMMC controller */
-#define EMMC_DEVICEID    0x9D2B
+#define EFI_TCO_RESET_PROTOCOL_GUID                                     \
+        {0xa6a79162, 0xe325, 0x4c30,{0xbc, 0xc3, 0x59, 0x37, 0x30, 0x64, 0xef, 0xb3}}
 
-/* Kabylake doesn't use UFS, hence set it as default value for build successfully */
-#define UFS_PCI_DID    0x00
+typedef struct _EFI_TCO_RESET_PROTOCOL EFI_TCO_RESET_PROTOCOL;
 
-#define HW_SERIAL_TYPE        CB_SERIAL_TYPE_MEMORY_MAPPED
-#define HW_SERIAL_REG_WIDTH   4
+typedef
+EFI_STATUS
+(EFIAPI *EFI_TCO_RESET_PROTOCOL_ENABLE_WATCHDOG) (
+        IN OUT UINT32 *RcrbGcsValue
+        );
 
-/* serial port base address */
-#define SERIAL_PCI_DID        0x9d66
+typedef
+EFI_STATUS
+(EFIAPI *EFI_TCO_RESET_PROTOCOL_DISABLE_WATCHDOG) (
+        IN UINT32 RcrbGcsValue
+        );
 
-/* PCI device id of NVME */
-#define NVME_PCI_DID 	0xF1A5
-#define NVME_DISKBUS	0x1D00
+struct _EFI_TCO_RESET_PROTOCOL {
+        EFI_TCO_RESET_PROTOCOL_ENABLE_WATCHDOG  EnableTcoReset;
+        EFI_TCO_RESET_PROTOCOL_DISABLE_WATCHDOG DisableTcoReset;
+};
 
-/* TCO base address, to be determined */
-#define TCOBASE    (0xffffffff)
-
-#endif /* __HW_KABYLAKE__ */
-
+#endif	/* _TCO_PROTOCOL_H_ */
