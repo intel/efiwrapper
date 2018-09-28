@@ -58,5 +58,8 @@
 
 #endif /* EFIWRAPPER_USE_EC_UART */
 
+/* TCO base address, to be determined */
+#define TCOBASE    (0xffffffff)
+
 #endif /* __HW_TIGERLAKE__ */
 

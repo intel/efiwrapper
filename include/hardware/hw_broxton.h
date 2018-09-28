@@ -55,5 +55,8 @@
 
 #define SERIAL_IOC_PCI_DID    0x5abe
 
+/* TCO base address for Gordon peak */
+#define TCOBASE		(0x00000460)
+
 #endif /* __HW_BROXTON__ */
 
