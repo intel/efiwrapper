@@ -60,21 +60,24 @@ extern int mmc_cid(uint8_t cid[16]);
 static char *build_serial(void)
 {
 	static char serial[15];
-	struct cid cid;
-	size_t i;
-	uint32_t *tmp = (uint32_t *)&cid;
+	struct cid m_cid;
+	uint8_t *cid = (uint8_t *) &m_cid;
+	uint32_t sn;
 	int ret;
 
-	ret = mmc_cid((uint8_t *)&cid);
+	ret = mmc_cid((uint8_t *)&m_cid);
 	if (ret)
 		return NULL;
 
-	for (i = 0; i < sizeof(cid) / sizeof(*tmp); i++)
-		tmp[i] = __builtin_bswap32(tmp[i]);
+	sn = (cid[9]<<24) | (cid[8]<<16) | (cid[15]<<8) | (cid[14]);
+	serial[0] = cid[0];
+	serial[1] = cid[7];
+	serial[2] = cid[6];
+	serial[3] = cid[5];
+	serial[4] = cid[4];
+	serial[5] = cid[11];
 
-	memcpy(&serial[0], cid.pnm, sizeof(cid.pnm));
-	snprintf(&serial[6], 9, "%08x", cid.psn);
-
+	snprintf(&serial[6], 9, "%08x", sn);
 	return serial;
 }
 
