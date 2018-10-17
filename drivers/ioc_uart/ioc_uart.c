@@ -501,7 +501,7 @@ ioc_reboot(EFI_RESET_TYPE ResetType, CHAR16 *ResetData)
 {
 	EFI_IGNORE_SUS_STAT_TOGGLES numberignoretoggles;
 	size_t i;
-	CHAR16 *fastboot_name[] = {L"bootloader", L"fastboot"};
+	CHAR16 *fastboot_name[] = {L"bootloader", L"fastboot", L"recovery"};
 	BOOLEAN is_fastboot = FALSE;
 	EFI_STATUS ret;
 
