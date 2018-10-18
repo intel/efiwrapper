@@ -209,7 +209,7 @@ VirtioRpmbAddVirtqueue(
 				VirtioAppendDesc(
 				&Dev->Ring,
 				RpmbFrameDeviceAddress[i],
-				sizeof(RPMB_DATA_FRAME),
+				sizeof(RPMB_DATA_FRAME) * (SeqCmdData->cmds[i].n_rpmb_frame ? : 1),
 				VRING_DESC_F_NEXT,
 				&Indices
 				);
@@ -217,7 +217,7 @@ VirtioRpmbAddVirtqueue(
 				VirtioAppendDesc(
 				&Dev->Ring,
 				RpmbFrameDeviceAddress[i],
-				sizeof(RPMB_DATA_FRAME),
+				sizeof(RPMB_DATA_FRAME) * (SeqCmdData->cmds[i].n_rpmb_frame ? : 1),
 				VRING_DESC_F_WRITE,
 				&Indices
 				);
