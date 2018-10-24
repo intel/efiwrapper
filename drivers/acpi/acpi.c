@@ -189,7 +189,7 @@ static void UpdateAcpiGnvs(EFI_ACPI_DESCRIPTION_HEADER *newDsdt,
 
 static EFI_ACPI_DESCRIPTION_HEADER *
 FindAcpiTableBySignature(EFI_ACPI_DESCRIPTION_HEADER *Xsdt, UINT32 Signature,
-			 UINT32 *EntryIndex)
+			 UINT32 *EntryIndex, UINT64 OemTableId, UINT32 OemRevision)
 {
 	EFI_ACPI_DESCRIPTION_HEADER *CurrHdr;
 	UINT64 *XsdtEntry;
@@ -204,7 +204,9 @@ FindAcpiTableBySignature(EFI_ACPI_DESCRIPTION_HEADER *Xsdt, UINT32 Signature,
 	for (Index = 0; Index < EntryNum; Index++) {
 		CurrHdr = (EFI_ACPI_DESCRIPTION_HEADER *)XsdtEntry[Index];
 
-		if ((CurrHdr != NULL) && (CurrHdr->Signature == Signature)) {
+		if ((CurrHdr != NULL) && (CurrHdr->Signature == Signature) &&
+		    ((OemTableId == 0) || ((OemTableId == CurrHdr->OemTableId) &&
+		    (CurrHdr->OemRevision <= OemRevision)))) {
 			if (EntryIndex != NULL)
 				*EntryIndex = Index;
 
@@ -216,7 +218,7 @@ FindAcpiTableBySignature(EFI_ACPI_DESCRIPTION_HEADER *Xsdt, UINT32 Signature,
 }
 
 static EFIAPI EFI_STATUS InstallAcpiTable(__attribute__((__unused__))
-					  EFI_ACPI_TABLE_PROTOCOL *This,
+					  EFI_ACPI_TABLE_PROTOCOL * This,
 					  VOID *AcpiTableBuffer,
 					  UINTN AcpiTableBufferSize,
 					  __attribute__((__unused__))
@@ -232,6 +234,8 @@ static EFIAPI EFI_STATUS InstallAcpiTable(__attribute__((__unused__))
 	UINT32 Size;
 	UINT32 EntryNum;
 	EFI_STATUS Status;
+	UINT64 OemTableId;
+	UINT32 OemRevision;
 
 	if (Rsdp == NULL)
 		return EFI_NOT_READY;
@@ -279,14 +283,22 @@ static EFIAPI EFI_STATUS InstallAcpiTable(__attribute__((__unused__))
 		// Update the ACPI header to pointer to the new copy
 		// And then update the table if required
 		AcpiHdr = (EFI_ACPI_DESCRIPTION_HEADER *)NewTable;
-
+		if (AcpiHdr->Signature ==
+		    EFI_ACPI_5_0_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE) {
+			//need to check OEM table ID and revision for SSDT
+			OemTableId = AcpiHdr->OemTableId;
+			OemRevision = AcpiHdr->OemRevision;
+		} else {
+			OemTableId = 0;
+			OemRevision = 0;
+		}
 		if (AcpiHdr->Signature ==
 		    EFI_ACPI_5_0_DIFFERENTIATED_SYSTEM_DESCRIPTION_TABLE_SIGNATURE) {
 			Facp = (EFI_ACPI_5_0_FIXED_ACPI_DESCRIPTION_TABLE *)
 			    FindAcpiTableBySignature(
 				Xsdt,
 				EFI_ACPI_5_0_FIXED_ACPI_DESCRIPTION_TABLE_SIGNATURE,
-				&EntryIndex);
+				&EntryIndex, OemTableId, OemRevision);
 
 			if (Facp != NULL) { // DSDT override
 				EFI_ACPI_DESCRIPTION_HEADER *oldDsdt;
@@ -312,10 +324,8 @@ static EFIAPI EFI_STATUS InstallAcpiTable(__attribute__((__unused__))
 			}
 		} else {
 			// Try to find the table to replace
-			if ((FindAcpiTableBySignature(Xsdt, AcpiHdr->Signature,
-						      &EntryIndex) != NULL) &&
-			    (AcpiHdr->Signature !=
-			     EFI_ACPI_5_0_SECONDARY_SYSTEM_DESCRIPTION_TABLE_SIGNATURE)) {
+			if (FindAcpiTableBySignature(Xsdt, AcpiHdr->Signature,
+						     &EntryIndex, OemTableId, OemRevision) != NULL) {
 				XsdtEntry[EntryIndex] = (UINT32)(UINTN)AcpiHdr;
 			} else { // new table, to add
 				if (EntryNum >= MAX_XSDT_HEADER_ENTRIES) {
@@ -341,7 +351,7 @@ static EFIAPI EFI_STATUS InstallAcpiTable(__attribute__((__unused__))
 }
 
 static EFIAPI EFI_STATUS UninstallAcpiTable(__attribute__((__unused__))
-					    EFI_ACPI_TABLE_PROTOCOL *This,
+					    EFI_ACPI_TABLE_PROTOCOL * This,
 					    __attribute__((__unused__))
 					    UINTN TableKey)
 {
