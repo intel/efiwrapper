@@ -52,36 +52,49 @@
  *
  * This structure is serialized as the "ABL.hwver" command line
  * parameter built as follow:
- * "$cpu,$cpuNcores,$cpuFreq,$sku,$resetCause,$platformId,$moduleId"
+ *
+ * "$cpu,$cpuNcores,$cpuFreq,$platformId,$sku,$MRC_amap.TOM"
+ *
+ * where $MRC_amap.TOM is the total amount of memory present.
  */
+static const char *get_hwver_token(const char *hwver, size_t index,
+				   char *token, size_t token_size)
+{
+	char *data, *cur;
+	size_t i;
+
+	data = strdup(hwver);
+	if (!data)
+		return SMBIOS_UNDEFINED;
+
+	cur = strtok(data, ",");
+	if (!cur)
+		return SMBIOS_UNDEFINED;
+
+	for (i = 0; i < index; i++) {
+		cur = strtok(NULL, ",");
+		if (!cur)
+			return SMBIOS_UNDEFINED;
+	}
+
+	if (strlen(cur) > token_size)
+		return SMBIOS_UNDEFINED;
+
+	strcpy(token, cur);
+	free(data);
+	return token;
+}
+
+static const char *get_platform_id(const char *str)
+{
+	static char platform_id[5];
+	return get_hwver_token(str, 3, platform_id, sizeof(platform_id));
+}
+
 static const char *get_cpu_stepping(const char *str)
 {
-	static char out[4];
-	unsigned long stepping;
-	char *data, *endptr;
-	int ret;
-
-	data = strdup(str);
-	if (!data)
-		return SMBIOS_UNDEFINED;
-
-	data = strtok(data, ",");
-	if (!data)
-		return SMBIOS_UNDEFINED;
-
-	stepping = strtoul(data, &endptr, 16);
-	free(data);
-	if (*endptr != '\0')
-		return SMBIOS_UNDEFINED;
-
-	if (stepping > 0xff)
-		return SMBIOS_UNDEFINED;
-
-	ret = snprintf(out, sizeof(out), "%lx", stepping);
-	if (ret < 0)
-		return SMBIOS_UNDEFINED;
-
-	return out;
+	static char stepping[3];
+	return get_hwver_token(str, 0, stepping, sizeof(stepping));
 }
 
 static const char *identity(const char *str)
@@ -100,6 +113,7 @@ static const struct {
 	{ "androidboot.name", 1, offsetof(SMBIOS_TYPE1, ProductName), identity },
 	{ "androidboot.brand", 2, offsetof(SMBIOS_TYPE2, Manufacturer), identity },
 	{ "androidboot.device", 2, offsetof(SMBIOS_TYPE2, ProductName), identity },
+	{ "ABL.hwver", 2, offsetof(SMBIOS_TYPE2, Version), get_platform_id },
 	{ "ABL.hwver", 1, offsetof(SMBIOS_TYPE1, Version), get_cpu_stepping }
 };
 
