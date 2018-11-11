@@ -67,6 +67,7 @@ typedef enum {
 	OsBootDeviceUsb,
 	OsBootDeviceNvme,
 	OsBootDeviceMemory,
+	OsBootDeviceVirtual,
 	OsBootDeviceMax
 } SBL_OS_BOOT_MEDIUM_TYPE;
 

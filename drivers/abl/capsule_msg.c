@@ -205,6 +205,7 @@ static EFI_STATUS cse4sbl_capsule_cmd_create(CSE_CMD **cmd, size_t *cmd_size, co
 		[STORAGE_SDCARD] = OsBootDeviceSd,
 		[STORAGE_SATA]   = OsBootDeviceSata,
 		[STORAGE_NVME]   = OsBootDeviceNvme,
+		[STORAGE_VIRTUAL] = OsBootDeviceVirtual,
 		[STORAGE_ALL]    = OsBootDeviceEmmc
 	};
 
