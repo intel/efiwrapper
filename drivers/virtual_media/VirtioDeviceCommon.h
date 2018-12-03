@@ -17,7 +17,7 @@
 
 #include <assert.h>
 
-#define VIRTUAL_MEDIA_DEBUG		1
+#define VIRTUAL_MEDIA_DEBUG		0
 #if VIRTUAL_MEDIA_DEBUG
 #define virtual_media_dbg(a,...)	{printf(a);printf(__VA_ARGS__);}
 #else
