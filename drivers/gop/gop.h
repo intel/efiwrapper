@@ -1,6 +1,8 @@
 /*
- * Copyright (c) 2017, Intel Corporation
+ * Copyright (c) 2018, Intel Corporation
  * All rights reserved.
+ *
+ * Author: Jérémy Compostella <jeremy.compostella@intel.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,40 +29,11 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __HW_BROXTON__
-#define __HW_BROXTON__
+#ifndef _GOP_H_
+#define _GOP_H_
 
-/* PCI device id of OTG */
-#define XDCI_PID           0x5aaa
-#define XHCI_PID           0x5aa8
+#include <ewdrv.h>
 
-/* PCI device id of EMMC controller */
-#define EMMC_DEVICEID      0x5acc
-/* UFS is not enabled on BXT, hence set it as default value*/
-#define UFS_PCI_DID    0x0000
-/* NVME is not enabled on BXT, hence set it as default value*/
-#define NVME_PCI_DID    0x0000
-#define NVME_DISKBUS    0x0000
+extern ewdrv_t gop_drv;
 
-#ifdef EFIWRAPPER_USE_EC_UART
-#define SERIAL_BASEADDR       0x3f8
-#define HW_SERIAL_TYPE        CB_SERIAL_TYPE_IO_MAPPED
-#define HW_SERIAL_REG_WIDTH   1
-#else
-/* serial port base address */
-#define SERIAL_PCI_DID        0x5ac0
-#define HW_SERIAL_TYPE        CB_SERIAL_TYPE_MEMORY_MAPPED
-#define HW_SERIAL_REG_WIDTH   4
-#endif
-
-#define SERIAL_IOC_PCI_DID    0x5abe
-
-/* TCO base address for Gordon peak */
-#define TCOBASE		(0x00000460)
-
-/* APL HD Graphics 505 */
-#define VGA_PID            0x5a84
-#define VGA_PID2           0x5a85
-
-#endif /* __HW_BROXTON__ */
-
+#endif	/* _GOP_H_ */
