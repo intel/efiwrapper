@@ -95,6 +95,27 @@ VirtioWriteBlocks (
 	IN  VOID                          *DataAddress
 	);
 
+/**
+  This function erase a specified number of device blocks.
+
+  @param[in]  DeviceIndex   Specifies the block device to which the function wants
+                            to talk.
+  @param[in]  StartLBA      The starting logical block address to be erased.
+                            The caller is responsible for erasing only legitimate locations.
+  @param[in]  Size      The size in bytes to be erased. This must be a multiple of the
+                            physical block size of the device.
+
+  @retval EFI_SUCCESS       The operation is done correctly.
+  @retval Others            The operation fails.
+
+**/
+EFI_STATUS
+EFIAPI
+VirtioEraseBlocks (
+	IN UINTN                         DeviceIndex,
+	IN EFI_LBA                       StartLBA,
+	IN UINTN                         Size
+	);
 
 /**
   This function initializes VirtioBlk device

@@ -1,8 +1,6 @@
 /*
- * Copyright (c) 2016, Intel Corporation
+ * Copyright (c) 2018, Intel Corporation
  * All rights reserved.
- *
- * Author: Jérémy Compostella <jeremy.compostella@intel.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,61 +27,16 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _STORAGE_H_
-#define _STORAGE_H_
+#ifndef _ERASEBLOCK_H_
+#define _ERASEBLOCK_H_
 
 #include <efi.h>
 #include <efiapi.h>
+#include <protocol/EraseBlock.h>
+#include <media.h>
 
-typedef struct storage {
-	EFI_STATUS (*init)(struct storage *s);
-	EFI_LBA (*read)(struct storage *s, EFI_LBA start, EFI_LBA count,
-			void *buf);
-	EFI_LBA (*write)(struct storage *s, EFI_LBA start, EFI_LBA count,
-			 const void *buf);
-	EFI_STATUS (*erase)(struct storage *s, EFI_LBA start, UINTN Size);
-	UINT8 pci_function;
-	UINT8 pci_device;
-	EFI_LBA blk_cnt;
-	UINT32 blk_sz;
-	void *priv;
-} storage_t;
+EFI_STATUS erase_block_init(EFI_SYSTEM_TABLE *st, media_t *media, EFI_HANDLE *handle);
+EFI_STATUS erase_block_free(EFI_SYSTEM_TABLE *st, EFI_HANDLE handle);
 
-enum storage_type {
-	STORAGE_EMMC,
-	STORAGE_UFS,
-	STORAGE_SDCARD,
-	STORAGE_SATA,
-	STORAGE_NVME,
-	STORAGE_VIRTUAL,
-	STORAGE_ALL
-};
+#endif
 
-typedef enum {
-	OsBootDeviceSata,
-	OsBootDeviceSd,
-	OsBootDeviceEmmc,
-	OsBootDeviceUfs,
-	OsBootDeviceSpi,
-	OsBootDeviceUsb,
-	OsBootDeviceNvme,
-	OsBootDeviceMemory,
-	OsBootDeviceVirtual,
-	OsBootDeviceMax
-} SBL_OS_BOOT_MEDIUM_TYPE;
-
-typedef struct boot_dev {
-	enum storage_type type;
-	UINT32 diskbus;
-} boot_dev_t;
-
-EFI_STATUS storage_init(EFI_SYSTEM_TABLE *st, storage_t *storage,
-			EFI_HANDLE *handle_p);
-EFI_STATUS storage_free(EFI_SYSTEM_TABLE *st, EFI_HANDLE handle);
-
-EFI_STATUS identify_boot_media();
-
-boot_dev_t* get_boot_media();
-UINT8 get_boot_media_device_path_type(void);
-
-#endif	/* _STORAGE_H_ */

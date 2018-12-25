@@ -177,6 +177,7 @@ static storage_t sdhci_mmc_storage = {
 	.init = _init,
 	.read = _read,
 	.write = _write,
+	.erase = NULL,
 	.pci_function = 0,
 	.pci_device = 0,
 };
