@@ -22,6 +22,7 @@
 
 #include "Virtio.h"
 #include "VirtioDevice.h"
+#include "protocol/EraseBlock.h"
 
 #ifndef EFI_BLOCK_IO_PROTOCOL
 #define EFI_BLOCK_IO_PROTOCOL EFI_BLOCK_IO
@@ -46,12 +47,16 @@ typedef struct {
 	EFI_EVENT		ExitBoot;	// DriverBindingStart  0
 	VRING			Ring;		// VirtioRingInit      2
 	EFI_BLOCK_IO_PROTOCOL	BlockIo;		// VirtioBlkInit       1
+	EFI_ERASE_BLOCK_PROTOCOL	EraseBlock;
 	EFI_BLOCK_IO_MEDIA	BlockIoMedia;	// VirtioBlkInit       1
 	VOID			*RingMap;	// VirtioRingMap       2
 } VBLK_DEV;
 
 #define VIRTIO_BLK_FROM_BLOCK_IO(BlockIoPointer) \
 	CR (BlockIoPointer, VBLK_DEV, BlockIo, VBLK_SIG)
+
+#define VIRTIO_BLK_FROM_ERASE_BLOCK(EraseBlockPointer) \
+	CR (EraseBlockPointer, VBLK_DEV, EraseBlock, VBLK_SIG)
 
 /**
 
@@ -163,6 +168,24 @@ VirtioBlkWriteBlocks (
 	IN VOID                  *Buffer
 	);
 
+/**
+
+  EraseBlocks() operation for virtio-blk.
+
+  A zero BufferSize doesn't seem to be prohibited, so do nothing in that case,
+  successfully.
+
+**/
+
+EFI_STATUS
+EFIAPI
+VirtioBlkEraseBlocks (
+	IN EFI_ERASE_BLOCK_PROTOCOL  *This,
+	IN UINT32                    MediaId,
+	IN EFI_LBA                   Lba,
+	IN OUT EFI_ERASE_BLOCK_TOKEN *Token,
+	IN UINTN                     Size
+	);
 
 /**
 

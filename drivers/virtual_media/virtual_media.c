@@ -109,10 +109,25 @@ static EFI_LBA _write(storage_t *s, EFI_LBA start, EFI_LBA count, const void *bu
 		return 0;
 }
 
+static EFI_STATUS _erase(storage_t *s, EFI_LBA start, UINTN Size)
+{
+	EFI_STATUS ret;
+	UINT32 blk_sz;
+
+	ret = VirtioEraseBlocks (
+		DEVICE_INDEX_DEFAULT,
+		start,
+		Size);
+	blk_sz = s->blk_sz;
+
+	return ret;
+}
+
 static storage_t storage_virtual_media = {
 	.init = _init,
 	.read = _read,
 	.write = _write,
+	.erase = _erase,
 	.pci_function = 0,
 	.pci_device = 0,
 };

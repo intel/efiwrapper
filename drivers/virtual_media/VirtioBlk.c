@@ -38,6 +38,10 @@
 #define SIZE_1GB 0x40000000
 #endif
 
+#ifndef SECTOR_SHIFT
+#define SECTOR_SHIFT 9
+#endif
+
 #define EFI_BLOCK_IO_PROTOCOL_REVISION3 0x00020031
 
 /**
@@ -279,22 +283,27 @@ SynchronousRequest (
 	IN              EFI_LBA  Lba,
 	IN              UINTN    BufferSize,
 	IN OUT volatile VOID     *Buffer,
-	IN              BOOLEAN  RequestIsWrite
+	IN              BOOLEAN  RequestIsWrite,
+	IN              UINT32   RequestType
 	)
 {
 	UINT32                  BlockSize;
 	volatile VIRTIO_BLK_REQ Request;
+	VIRTIO_DISCARD_RANGE    EraseRange;
 	volatile UINT8          *HostStatus;
 	VOID                    *HostStatusBuffer;
 	DESC_INDICES            Indices;
 	VOID                    *RequestMapping;
 	VOID                    *StatusMapping;
 	VOID                    *BufferMapping;
+	VOID                    *EraseRangeMapping;
 	EFI_PHYSICAL_ADDRESS    BufferDeviceAddress;
 	EFI_PHYSICAL_ADDRESS    HostStatusDeviceAddress;
 	EFI_PHYSICAL_ADDRESS    RequestDeviceAddress;
+	EFI_PHYSICAL_ADDRESS    EraseRangeDeviceAddress;
 	EFI_STATUS              Status;
 	EFI_STATUS              UnmapStatus;
+	UINT32                  Flags = 0;
 
 	BlockSize = Dev->BlockIoMedia.BlockSize;
 
@@ -313,11 +322,22 @@ SynchronousRequest (
 	// Prepare virtio-blk request header, setting zero size for flush.
 	// IO Priority is homogeneously 0.
 	//
-	Request.Type   = RequestIsWrite ?
-		(BufferSize == 0 ? VIRTIO_BLK_T_FLUSH : VIRTIO_BLK_T_OUT) :
-		VIRTIO_BLK_T_IN;
 	Request.IoPrio = 0;
 	Request.Sector = MultU64x32(Lba, BlockSize / 512);
+
+	if (RequestType != VIRTIO_BLK_T_DISCARD) {
+		Request.Type   = RequestIsWrite ?
+			(BufferSize == 0 ? VIRTIO_BLK_T_FLUSH : VIRTIO_BLK_T_OUT) :
+			VIRTIO_BLK_T_IN;
+	}
+	else {
+		Request.Type   = RequestType;
+
+		Flags |= VIRTIO_BLK_WRITE_ZEROES_FLAG_UNMAP;
+		EraseRange.Sector = Request.Sector;
+		EraseRange.num_sectors = BufferSize >> SECTOR_SHIFT;;
+		EraseRange.flags = Flags;
+	}
 
 	//
 	// Host status is bi-directional (we preset with a value and expect the
@@ -356,20 +376,30 @@ SynchronousRequest (
 	// Map data buffer
 	//
 	if (BufferSize > 0) {
-	Status = VirtioMapAllBytesInSharedBuffer (
-		Dev->VirtIo,
-		(RequestIsWrite ?
-		VirtioOperationBusMasterRead :
-		VirtioOperationBusMasterWrite),
-		(VOID *) Buffer,
-		BufferSize,
-		&BufferDeviceAddress,
-		&BufferMapping
-		);
-	if (EFI_ERROR (Status)) {
-		Status = EFI_DEVICE_ERROR;
-		goto UnmapRequestBuffer;
-	}
+		if (RequestType == VIRTIO_BLK_T_DISCARD)
+			Status = VirtioMapAllBytesInSharedBuffer(
+				Dev->VirtIo,
+				VirtioOperationBusMasterRead,
+				(VOID *) &EraseRange,
+				sizeof(EraseRange),
+				&EraseRangeDeviceAddress,
+				&EraseRangeMapping
+				);
+		else
+			Status = VirtioMapAllBytesInSharedBuffer (
+				Dev->VirtIo,
+				(RequestIsWrite ?
+				VirtioOperationBusMasterRead :
+				VirtioOperationBusMasterWrite),
+				(VOID *) Buffer,
+				BufferSize,
+				&BufferDeviceAddress,
+				&BufferMapping
+				);
+		if (EFI_ERROR (Status)) {
+			Status = EFI_DEVICE_ERROR;
+			goto UnmapRequestBuffer;
+		}
 	}
 
 	//
@@ -417,26 +447,36 @@ SynchronousRequest (
 	// data buffer for read/write in second desc
 	//
 	if (BufferSize > 0) {
-		//
-		// From virtio-0.9.5, 2.3.2 Descriptor Table:
-		// "no descriptor chain may be more than 2^32 bytes long in total".
-		//
-		// The predicate is ensured by the call contract above (for flush), or
-		// VerifyReadWriteRequest() (for read/write). It also implies that
-		// converting BufferSize to UINT32 will not truncate it.
-		//
-		ASSERT (BufferSize <= SIZE_1GB);
+		if (RequestType == VIRTIO_BLK_T_DISCARD)
+			VirtioAppendDesc(
+				&Dev->Ring,
+				EraseRangeDeviceAddress,
+				sizeof(EraseRange),
+				VRING_DESC_F_NEXT,
+				&Indices
+				);
+		else {
+			//
+			// From virtio-0.9.5, 2.3.2 Descriptor Table:
+			// "no descriptor chain may be more than 2^32 bytes long in total".
+			//
+			// The predicate is ensured by the call contract above (for flush), or
+			// VerifyReadWriteRequest() (for read/write). It also implies that
+			// converting BufferSize to UINT32 will not truncate it.
+			//
+			ASSERT (BufferSize <= SIZE_1GB);
 
-		//
-		// VRING_DESC_F_WRITE is interpreted from the host's point of view.
-		//
-		VirtioAppendDesc (
-			&Dev->Ring,
-			BufferDeviceAddress,
-			(UINT32) BufferSize,
-			VRING_DESC_F_NEXT | (RequestIsWrite ? 0 : VRING_DESC_F_WRITE),
-			&Indices
-			);
+			//
+			// VRING_DESC_F_WRITE is interpreted from the host's point of view.
+			//
+			VirtioAppendDesc (
+				&Dev->Ring,
+				BufferDeviceAddress,
+				(UINT32) BufferSize,
+				VRING_DESC_F_NEXT | (RequestIsWrite ? 0 : VRING_DESC_F_WRITE),
+				&Indices
+				);
+		}
 	}
 
 	//
@@ -469,13 +509,16 @@ SynchronousRequest (
 
 	UnmapDataBuffer:
 	if (BufferSize > 0) {
-		UnmapStatus = Dev->VirtIo->UnmapSharedBuffer (Dev->VirtIo, BufferMapping);
-	if (EFI_ERROR (UnmapStatus) && !RequestIsWrite && !EFI_ERROR (Status)) {
-		//
-		// Data from the bus master may not reach the caller; fail the request.
-		//
-		Status = EFI_DEVICE_ERROR;
-	}
+		if (RequestType == VIRTIO_BLK_T_DISCARD)
+			UnmapStatus = Dev->VirtIo->UnmapSharedBuffer (Dev->VirtIo, EraseRangeMapping);
+		else
+			UnmapStatus = Dev->VirtIo->UnmapSharedBuffer (Dev->VirtIo, BufferMapping);
+		if (EFI_ERROR (UnmapStatus) && !RequestIsWrite && !EFI_ERROR (Status)) {
+			//
+			// Data from the bus master may not reach the caller; fail the request.
+			//
+			Status = EFI_DEVICE_ERROR;
+		}
 	}
 
 	UnmapRequestBuffer:
@@ -518,7 +561,8 @@ VirtioBlkReadBlocksInternal (
 		Lba,
 		BufferSize,
 		Buffer,
-		FALSE       // RequestIsRead
+		FALSE,       // RequestIsRead
+		VIRTIO_BLK_T_INVALID
 		);
 }
 
@@ -633,7 +677,8 @@ VirtioBlkWriteBlocksInternal (
 		Lba,
 		BufferSize,
 		Buffer,
-		TRUE        // RequestIsWrite
+		TRUE,        // RequestIsWrite
+		VIRTIO_BLK_T_INVALID
 	);
 
 	return Status;
@@ -718,6 +763,49 @@ VirtioBlkWriteBlocks (
 	return Status;
 }
 
+/**
+
+  EraseBlocks() operation for virtio-blk.
+
+  RequestType that pass to SynchronousRequest() is VIRTIO_BLK_T_DISCARD.
+
+**/
+
+EFI_STATUS
+EFIAPI
+VirtioBlkEraseBlocks (
+	IN EFI_ERASE_BLOCK_PROTOCOL         *This,
+	IN __attribute__((unused)) UINT32   MediaId,
+	IN EFI_LBA                          Lba,
+	IN OUT __attribute__((unused)) EFI_ERASE_BLOCK_TOKEN *Token,
+	IN UINTN                            Size
+	)
+{
+	EFI_STATUS Status;
+	VBLK_DEV   *Dev;
+	UINT64     Features;
+
+	Dev = VIRTIO_BLK_FROM_ERASE_BLOCK (This);
+
+	Status = Dev->VirtIo->GetDeviceFeatures (Dev->VirtIo, &Features);
+	if (EFI_ERROR (Status)) {
+		return Status;
+	}
+
+	if (Features & VIRTIO_BLK_F_DISCARD)
+		Status = SynchronousRequest (
+			Dev,
+			Lba,
+			Size,
+			NULL,
+			TRUE, // RequestIsWrite
+			VIRTIO_BLK_T_DISCARD
+		);
+	else
+		Status = EFI_UNSUPPORTED;
+
+	return Status;
+}
 
 /**
 
@@ -751,7 +839,8 @@ VirtioBlkFlushBlocks (
 			0,    // Lba
 			0,    // BufferSize
 			NULL, // Buffer
-			TRUE  // RequestIsWrite
+			TRUE,  // RequestIsWrite
+			VIRTIO_BLK_T_INVALID
 			) :
 		EFI_SUCCESS;
 }
@@ -885,8 +974,8 @@ VirtioBlkInit (
 	}
 
 	Features &= VIRTIO_BLK_F_BLK_SIZE | VIRTIO_BLK_F_TOPOLOGY | VIRTIO_BLK_F_RO |
-		VIRTIO_BLK_F_FLUSH | VIRTIO_F_VERSION_1 |
-		VIRTIO_F_IOMMU_PLATFORM;
+		VIRTIO_BLK_F_FLUSH | VIRTIO_F_VERSION_1 | VIRTIO_F_IOMMU_PLATFORM |
+		VIRTIO_BLK_F_DISCARD | VIRTIO_BLK_F_WRITE_ZEROES;
 
 	//
 	// In virtio-1.0, feature negotiation is expected to complete before queue
@@ -990,6 +1079,7 @@ VirtioBlkInit (
 	Dev->BlockIo.ReadBlocks			= &VirtioBlkReadBlocks;
 	Dev->BlockIo.WriteBlocks		= &VirtioBlkWriteBlocks;
 	Dev->BlockIo.FlushBlocks		= &VirtioBlkFlushBlocks;
+	Dev->EraseBlock.EraseBlocks		= &VirtioBlkEraseBlocks;
 	Dev->BlockIoMedia.MediaId		= 0;
 	Dev->BlockIoMedia.RemovableMedia	= FALSE;
 	Dev->BlockIoMedia.MediaPresent		= TRUE;

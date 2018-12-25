@@ -31,6 +31,7 @@
 
 #include "blockio.h"
 #include "diskio.h"
+#include "eraseblk.h"
 #include "external.h"
 #include "lib.h"
 #include "media.h"
@@ -144,7 +145,8 @@ static struct storage_interface {
 	{ "media", media_register, media_free },
 	{ "device path", dp_init, dp_free },
 	{ "blockio", blockio_init, blockio_free },
-	{ "diskio", diskio_init, diskio_free }
+	{ "diskio", diskio_init, diskio_free },
+	{ "eraseblock", erase_block_init, erase_block_free }
 };
 
 EFI_STATUS storage_init(EFI_SYSTEM_TABLE *st, storage_t *storage,

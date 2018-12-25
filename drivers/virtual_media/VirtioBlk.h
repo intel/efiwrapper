@@ -59,6 +59,8 @@ typedef struct {
 #define VIRTIO_BLK_F_SCSI		BIT7
 #define VIRTIO_BLK_F_FLUSH		BIT9  	// identical to "write cache enabled"
 #define VIRTIO_BLK_F_TOPOLOGY		BIT10 	// information on optimal I/O alignment
+#define VIRTIO_BLK_F_DISCARD		BIT13 	// DISCARD is supported
+#define VIRTIO_BLK_F_WRITE_ZEROES	BIT14 	// WRITE ZEROES is supported
 
 //
 // We keep the status byte separate from the rest of the virtio-blk request
@@ -73,12 +75,24 @@ typedef struct {
 } VIRTIO_BLK_REQ;
 #pragma pack()
 
+typedef struct {
+	UINT64 Sector;
+	UINT32 num_sectors;
+	UINT32 flags;
+} VIRTIO_DISCARD_RANGE;
+
+/* Unmap this range (only valid for write zeroes command) */
+#define VIRTIO_BLK_WRITE_ZEROES_FLAG_UNMAP	0x00000001
+
 #define VIRTIO_BLK_T_IN			0x00000000
 #define VIRTIO_BLK_T_OUT		0x00000001
 #define VIRTIO_BLK_T_SCSI_CMD		0x00000002
 #define VIRTIO_BLK_T_SCSI_CMD_OUT 	0x00000003
 #define VIRTIO_BLK_T_FLUSH		0x00000004
 #define VIRTIO_BLK_T_FLUSH_OUT		0x00000005
+#define VIRTIO_BLK_T_DISCARD 		0x0000000B
+#define VIRTIO_BLK_T_WRITE_ZEROES	0x0000000D
+#define VIRTIO_BLK_T_INVALID 		0x000000FF
 #define VIRTIO_BLK_T_BARRIER		BIT31
 
 #define VIRTIO_BLK_S_OK			0x00
