@@ -29,8 +29,24 @@ NvmCtrlPlatformInfo NvmCtrlInfo = { {1,0,0} };
 
 EFI_NVM_EXPRESS_PASS_THRU_PROTOCOL *NvmeGetPassthru(void)
 {
-	return (void *)&mNvmeCtrlPrivate->Passthru;
+  return (void *)&mNvmeCtrlPrivate->Passthru;
 }
+
+EFI_STORAGE_SECURITY_COMMAND_PROTOCOL *NvmeGetSecurityInterface(void)
+{
+  NVME_DEVICE_PRIVATE_DATA *device = mMultiNvmeDrive[0];
+  EFI_STORAGE_SECURITY_COMMAND_PROTOCOL *security;
+
+  if (device == NULL)
+    return NULL;
+
+  security = &device->StorageSecurity;
+  if (security->SendData == NULL || security->ReceiveData == NULL)
+    return NULL;
+
+  return security;
+}
+
 
 //
 // Template for NVM Express Pass Thru Mode data structure.
@@ -150,6 +166,17 @@ EnumerateNvmeDevNamespace (
 
     CopyMem (&Device->NamespaceData, NamespaceData, sizeof (NVME_ADMIN_NAMESPACE_DATA));
     mMultiNvmeDrive[NamespaceId - 1] = Device; //NamespaceId is 1 based
+
+    //
+    // Create StorageSecurityProtocol Instance
+    //
+    Device->StorageSecurity.ReceiveData = NvmeStorageSecurityReceiveData;
+    Device->StorageSecurity.SendData    = NvmeStorageSecuritySendData;
+    DEBUG_NVME((EFI_D_INFO, "## SECURITY_SEND_RECEIVE %d ####\n", (Private->ControllerData->Oacs & SECURITY_SEND_RECEIVE_SUPPORTED)));
+    if ((Private->ControllerData->Oacs & SECURITY_SEND_RECEIVE_SUPPORTED) == 0) {
+      Device->StorageSecurity.ReceiveData = NULL;
+      Device->StorageSecurity.SendData = NULL;
+    }
 
     //
     // Dump NvmExpress Identify Namespace Data
@@ -392,15 +419,13 @@ NvmeGetMediaInfo (
 EFI_STATUS
 EFIAPI
 NvmeReadBlocks (
-  IN  UINTN                         DeviceIndex,
+  IN  UINTN                         DeviceIndex __attribute__((unused)),
   IN  EFI_PEI_LBA                   StartLBA,
   IN  UINTN                         BufferSize,
   OUT VOID                          *Buffer
   )
 {
   EFI_STATUS Status;
-
-  DeviceIndex = DeviceIndex;
 
   Status = NvmeBlockIoReadBlocks(&mMultiNvmeDrive[0]->BlockIo, 0, StartLBA, BufferSize, Buffer);
 
@@ -423,15 +448,13 @@ NvmeReadBlocks (
 EFI_STATUS
 EFIAPI
 NvmeWriteBlocks (
-  IN  UINTN                         DeviceIndex,
+  IN  UINTN                         DeviceIndex __attribute__((unused)),
   IN  EFI_LBA                       StartLBA,
   IN  UINTN                         DataSize,
   IN  VOID                          *DataAddress
   )
 {
   EFI_STATUS Status;
-
-  DeviceIndex = DeviceIndex;
 
   Status = NvmeBlockIoWriteBlocks(&mMultiNvmeDrive[0]->BlockIo, 0, StartLBA, DataSize, DataAddress);
 

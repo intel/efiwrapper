@@ -951,7 +951,7 @@ NvmeControllerInit (
 	DEBUG_NVME ((EFI_D_INFO, "    CQES      : 0x%x\n", Private->ControllerData->Cqes));
 	DEBUG_NVME ((EFI_D_INFO, "    NN        : 0x%x\n", Private->ControllerData->Nn));
 	DEBUG_NVME ((EFI_D_INFO, "    Oncs      : 0x%x\n", Private->ControllerData->Oncs));
-
+	DEBUG_NVME ((EFI_D_INFO, "    Oacs      : 0x%x\n", Private->ControllerData->Oacs));
 
 	//
 	// Create two I/O completion queues.
