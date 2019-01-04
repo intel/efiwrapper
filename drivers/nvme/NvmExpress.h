@@ -22,6 +22,7 @@
 #include <external.h>
 
 #include "NvmInternal.h"
+#include "protocol/StorageSecurityCommand.h"
 
 #define nvme_dbg(a, ...) { printf(__VA_ARGS__); }
 #define DEBUG_NVME(a) (nvme_dbg a)
@@ -219,6 +220,7 @@ struct _NVME_DEVICE_PRIVATE_DATA {
 
   NVME_CONTROLLER_PRIVATE_DATA             *Controller;
 
+  EFI_STORAGE_SECURITY_COMMAND_PROTOCOL    StorageSecurity;
 };
 
 //

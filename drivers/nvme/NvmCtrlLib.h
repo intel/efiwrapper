@@ -147,4 +147,6 @@ EFI_STATUS EFIAPI NvmeInitialize (IN UINTN NvmeHcPciBase);
 
 EFI_NVM_EXPRESS_PASS_THRU_PROTOCOL *NvmeGetPassthru(void);
 
+EFI_STORAGE_SECURITY_COMMAND_PROTOCOL *NvmeGetSecurityInterface(void);
+
 #endif

@@ -123,11 +123,14 @@ static storage_t nvme_storage = {
 
 static EFI_HANDLE nvme_handle;
 static EFI_GUID nvme_pass_thru_guid = EFI_NVM_EXPRESS_PASS_THRU_PROTOCOL_GUID;
+static EFI_GUID nvme_security_guid = EFI_STORAGE_SECURITY_COMMAND_PROTOCOL_GUID;
 
 static EFI_STATUS nvme_drv_init(EFI_SYSTEM_TABLE *st)
 {
 	EFI_STATUS ret;
 	boot_dev_t *boot_dev;
+	EFI_STORAGE_SECURITY_COMMAND_PROTOCOL *StorageSecurity;
+	EFI_NVM_EXPRESS_PASS_THRU_PROTOCOL *nvme_passthru;
 
 	boot_dev = get_boot_media();
 	if (!boot_dev)
@@ -141,8 +144,18 @@ static EFI_STATUS nvme_drv_init(EFI_SYSTEM_TABLE *st)
 	if (EFI_ERROR(ret))
 		return ret;
 
-	EFI_NVM_EXPRESS_PASS_THRU_PROTOCOL *nvme_passthru = NvmeGetPassthru();
+	StorageSecurity = NvmeGetSecurityInterface();
+	if (StorageSecurity != NULL) {
+		ret = uefi_call_wrapper(st->BootServices->InstallProtocolInterface,
+			4,
+			&nvme_handle,
+			&nvme_security_guid,
+			EFI_NATIVE_INTERFACE,
+			StorageSecurity
+			);
+	}
 
+	nvme_passthru = NvmeGetPassthru();
 	return uefi_call_wrapper(st->BootServices->InstallProtocolInterface, 4,
 			&nvme_handle, &nvme_pass_thru_guid, EFI_NATIVE_INTERFACE, nvme_passthru);
 }
@@ -164,6 +177,14 @@ static EFI_STATUS nvme_drv_exit(EFI_SYSTEM_TABLE *st)
 
 	ret = uefi_call_wrapper(st->BootServices->UninstallProtocolInterface, 3,
 			nvme_handle, &nvme_pass_thru_guid, nvme_interface);
+
+	ret = uefi_call_wrapper(st->BootServices->HandleProtocol, 3,
+			nvme_handle, &nvme_security_guid, (VOID **)&nvme_interface);
+	if (EFI_ERROR(ret))
+		return ret;
+
+	ret = uefi_call_wrapper(st->BootServices->UninstallProtocolInterface, 3,
+			nvme_handle, &nvme_security_guid, nvme_interface);
 
 	return ret;
 }
