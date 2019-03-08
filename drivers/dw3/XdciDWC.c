@@ -24,7 +24,7 @@
 
 UINT32
 usb_reg_read (
-	IN UINT32    base,
+	IN UINTN     base,
 	IN UINT32    offset
 	)
 {
@@ -34,7 +34,7 @@ usb_reg_read (
 
 VOID
 usb_reg_write (
-	IN UINT32    base,
+	IN UINTN     base,
 	IN UINT32    offset,
 	IN UINT32    val
 	)
@@ -250,7 +250,7 @@ dwc_xdci_core_issue_ep_cmd (
 	IN DWC_XDCI_ENDPOINT_CMD_PARAMS    *ep_cmd_params
 	)
 {
-	UINT32 base_addr;
+	UINTN  base_addr;
 	UINT32 max_delay_iter = 5000;//DWC_XDCI_MAX_DELAY_ITERATIONS;
 
 	if (core_handle == NULL) {
@@ -315,7 +315,7 @@ dwc_xdci_core_flush_all_fifos (
 	IN XDCI_CORE_HANDLE    *core_handle
 	)
 {
-	UINT32 base_addr;
+	UINTN  base_addr;
 	UINT32 max_delay_iter = DWC_XDCI_MAX_DELAY_ITERATIONS;
 
 	if (core_handle == NULL) {
@@ -363,7 +363,7 @@ dwc_xdci_core_flush_ep_tx_fifo (
 	__attribute__((__unused__)) IN UINT32              ep_num
 	)
 {
-	UINT32 base_addr;
+	UINTN  base_addr;
 	UINT32 max_delay_iter = DWC_XDCI_MAX_DELAY_ITERATIONS;
 	//UINT32 fifo_num;
 
@@ -742,7 +742,7 @@ dwc_xdci_process_device_reset_done (
 	)
 {
 	DWC_XDCI_ENDPOINT_CMD_PARAMS    ep_cmd_params;
-	UINT32                          base_addr;
+	UINTN                           base_addr;
 	EFI_STATUS                      status = EFI_SUCCESS;
 
 	if (core_handle == NULL) {
@@ -1356,7 +1356,7 @@ dwc_xdci_core_init (
 	)
 {
 	EFI_STATUS                      status = EFI_DEVICE_ERROR;
-	UINT32                          base_addr;
+	UINTN                           base_addr;
 	XDCI_CORE_HANDLE                *local_core_handle;
 	DWC_XDCI_ENDPOINT_CMD_PARAMS    ep_cmd_params;
 	UINT32                          max_delay_iter = DWC_XDCI_MAX_DELAY_ITERATIONS;
@@ -1996,7 +1996,7 @@ dwc_xdci_core_isr_routine (
 	)
 {
 	XDCI_CORE_HANDLE    *local_core_handle = (XDCI_CORE_HANDLE *)core_handle;
-	UINT32              base_addr;
+	UINTN               base_addr;
 	UINT32              event_count;
 	UINT32              processed_event_count;
 	UINT32              i;
@@ -2055,7 +2055,7 @@ dwc_xdci_core_isr_routine_timer_based (
 	)
 {
 	XDCI_CORE_HANDLE    *local_core_handle = (XDCI_CORE_HANDLE *)core_handle;
-	UINT32              base_addr;
+	UINTN               base_addr;
 	UINT32              event_count;
 	UINT32              processed_event_count;
 	UINT32              current_event_addr;
@@ -2131,7 +2131,7 @@ dwc_xdci_core_connect (
 {
 	XDCI_CORE_HANDLE    *local_core_handle = (XDCI_CORE_HANDLE *)core_handle;
 	UINT32              max_delay_iter = DWC_XDCI_MAX_DELAY_ITERATIONS;
-	UINT32              base_addr;
+	UINTN               base_addr;
 
 	if (core_handle == NULL) {
 	        DEBUG ((DEBUG_INFO, "dwc_xdci_core_connect: INVALID handle\n"));
@@ -2188,7 +2188,7 @@ dwc_xdci_core_disconnect (
 {
 	XDCI_CORE_HANDLE  *local_core_handle = (XDCI_CORE_HANDLE *)core_handle;
 	UINT32            max_delay_iter = DWC_XDCI_MAX_DELAY_ITERATIONS;
-	UINT32            base_addr;
+	UINTN             base_addr;
 	UINT32            event_count;
 	UINT32            dsts;
 	UINT32            i;
@@ -2291,7 +2291,7 @@ dwc_xdci_core_set_address (
 	)
 {
 	XDCI_CORE_HANDLE  *local_core_handle = (XDCI_CORE_HANDLE *)core_handle;
-	UINT32            base_addr;
+	UINTN             base_addr;
 
 	if (core_handle == NULL) {
 	        DEBUG ((DEBUG_INFO, "dwc_xdci_core_set_address: INVALID handle\n"));
@@ -2399,7 +2399,7 @@ dwc_xdci_set_link_state (
 	)
 {
 	XDCI_CORE_HANDLE  *local_core_handle = (XDCI_CORE_HANDLE *)core_handle;
-	UINT32            base_addr;
+	UINTN             base_addr;
 
 	if (core_handle == NULL) {
 	        DEBUG ((DEBUG_INFO, "dwc_xdci_set_link_state: INVALID handle\n"));
@@ -2534,7 +2534,7 @@ dwc_xdci_ep_enable (
 {
 	XDCI_CORE_HANDLE  *local_core_handle = (XDCI_CORE_HANDLE *)core_handle;
 	UINT32            ep_num;
-	UINT32            base_addr;
+	UINTN             base_addr;
 
 	if (core_handle == NULL) {
 	        DEBUG ((DEBUG_INFO, "dwc_xdci_ep_enable: INVALID handle\n"));
@@ -2574,7 +2574,7 @@ dwc_xdci_ep_disable (
 {
 	XDCI_CORE_HANDLE  *local_core_handle = (XDCI_CORE_HANDLE *)core_handle;
 	UINT32            ep_num;
-	UINT32            base_addr;
+	UINTN             base_addr;
 
 	if (core_handle == NULL) {
 	        DEBUG ((DEBUG_INFO, "dwc_xdci_ep_disable: INVALID handle\n"));
@@ -2718,7 +2718,7 @@ dwc_xdci_ep_set_nrdy (
 {
 	XDCI_CORE_HANDLE  *local_core_handle = (XDCI_CORE_HANDLE *)core_handle;
 	UINT32            ep_num;
-	UINT32            base_addr;
+	UINTN             base_addr;
 	UINT32            max_delay_iter = DWC_XDCI_MAX_DELAY_ITERATIONS;
 
 	if (core_handle == NULL) {
@@ -2853,7 +2853,7 @@ dwc_xdci_ep0_receive_status_pkt (
 	DWC_XDCI_TRB_CONTROL            trb_ctrl;
 	DWC_XDCI_ENDPOINT_CMD_PARAMS    ep_cmd_params;
 	EFI_STATUS                      Status;
-	UINT32                          base_addr;
+	UINTN                           base_addr;
 
 	if (core_handle == NULL) {
 	        DEBUG ((DEBUG_INFO, "dwc_xdci_ep0_receive_status_pkt: INVALID handle\n"));
@@ -2937,7 +2937,7 @@ dwc_xdci_ep0_send_status_pkt (
 	DWC_XDCI_TRB                    *trb;
 	DWC_XDCI_ENDPOINT_CMD_PARAMS    ep_cmd_params;
 	EFI_STATUS                      Status;
-	UINT32                          base_addr;
+	UINTN                           base_addr;
 
 	if (core_handle == NULL) {
 	        DEBUG ((DEBUG_INFO, "dwc_xdci_ep0_send_status_pkt: INVALID handle\n"));
@@ -3013,7 +3013,7 @@ dwc_xdci_ep_tx_data (
 	DWC_XDCI_TRB_CONTROL          trb_ctrl;
 	EFI_STATUS                    Status;
 	UINT32                        ep_num;
-	UINT32                        base_addr;
+	UINTN                         base_addr;
 
 	if (core_handle == NULL) {
 	        DEBUG ((DEBUG_INFO, "dwc_xdci_ep_tx_data: INVALID handle\n"));
@@ -3118,7 +3118,7 @@ dwc_xdci_ep_rx_data (
 	DWC_XDCI_TRB_CONTROL          trb_ctrl;
 	EFI_STATUS                    Status;
 	UINT32                        ep_num;
-	UINT32                        base_addr;
+	UINTN                         base_addr;
 
 	if (core_handle == NULL) {
 	        DEBUG ((DEBUG_INFO, "dwc_xdci_ep_rx_data: INVALID handle\n"));
@@ -3209,7 +3209,7 @@ dwc_xdci_core_flush_ep_fifo (
 	IN UINT32              ep_num
 	)
 {
-	UINT32 base_addr;
+	UINTN  base_addr;
 	UINT32 max_delay_iter = DWC_XDCI_MAX_DELAY_ITERATIONS;
 	UINT32 fifo_num;
 	UINT32 Param;
@@ -3342,7 +3342,7 @@ usb_xdci_core_reinit (
 	)
 {
 	EFI_STATUS                      status = EFI_DEVICE_ERROR;
-	UINT32                          base_addr;
+	UINTN                           base_addr;
 	XDCI_CORE_HANDLE                *local_core_handle;
 	DWC_XDCI_ENDPOINT_CMD_PARAMS    ep_cmd_params;
 	UINT32                          max_delay_iter = DWC_XDCI_MAX_DELAY_ITERATIONS;
