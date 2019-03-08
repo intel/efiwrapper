@@ -474,7 +474,7 @@ typedef struct {
 	USB_ROLE                 role;                                                // Desired role i.e. host, device or OTG
 	USB_SPEED                actual_speed;                                        // Actual speed
 	USB_DEVICE_STATE         dev_state;                                           // Device state
-	UINT32                   base_address;                                        // Register base address
+	UINTN                    base_address;                                        // Register base address
 	UINT32                   flags;                                               // Init flags
 	UINT32                   max_dev_int_lines;                                   // One event buffer per interrupt line
 	DWC_XDCI_EVENT_BUFFER    event_buffers [DWC_XDCI_MAX_EVENTS_PER_BUFFER * 2];  // Event buffer pool
@@ -676,13 +676,13 @@ usb_get_physical_ep_num (
 
 UINT32
 usb_reg_read (
-	IN UINT32    base,
+	IN UINTN     base,
 	IN UINT32    offset
 	);
 
 VOID
 usb_reg_write (
-	IN UINT32    base,
+	IN UINTN     base,
 	IN UINT32    offset,
 	IN UINT32    val
 	);

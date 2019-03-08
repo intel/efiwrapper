@@ -786,11 +786,30 @@ UsbdEpRxData (
 	return Status;
 }
 
+#define  PCI_BASE_ADDRESS_MEM_TYPE_MASK	0x06
+#define  PCI_BASE_ADDRESS_MEM_TYPE_64	0x04	/* 64 bit address */
+static uint64_t pci_read_bar64(pcidev_t device)
+{
+	uint64_t addr64;
+	uint32_t addr;
+
+	addr = pci_read_config32(device, PCI_BASE_ADDRESS_0);
+	if ((addr & PCI_BASE_ADDRESS_MEM_TYPE_MASK) != PCI_BASE_ADDRESS_MEM_TYPE_64)
+		return addr & ~0xf;
+
+	addr64 = pci_read_config32(device, PCI_BASE_ADDRESS_0 + 4);
+	addr64 <<= 32;
+	addr64 |= addr & ~0xf;
+
+	return addr64;
+}
+
 static EFIAPI EFI_STATUS
 _usb_init_xdci(EFI_USB_DEVICE_MODE_PROTOCOL *This)
 {
 	EFI_STATUS status;
-	uint32_t addr, pci_command;
+	uint32_t pci_command;
+	UINTN addr_hci;
 	pcidev_t pci_dev;
 
 #if defined(FB_SET_USB_DEVICE_MODE)
@@ -811,10 +830,8 @@ _usb_init_xdci(EFI_USB_DEVICE_MODE_PROTOCOL *This)
 	ewdbg("PCI xDCI [%x:%x] %d.%d.%d", INTEL_VID, XDCI_PID,
 	      PCI_BUS(pci_dev), PCI_SLOT(pci_dev), PCI_FUNC(pci_dev));
 
-	addr = pci_read_config32(pci_dev, PCI_BASE_ADDRESS_0);
-	addr = addr & ~0xf;
-
-	config_params.BaseAddress = addr;
+	config_params.BaseAddress = (UINTN)pci_read_bar64(pci_dev);
+	ewdbg("xDCI BaseAddress =0x%llx\n", (uint64_t)config_params.BaseAddress);
 
 	/* configure xDCI as a system bus master */
 	pci_command = pci_read_config32(pci_dev, PCI_COMMAND);
@@ -827,8 +844,8 @@ _usb_init_xdci(EFI_USB_DEVICE_MODE_PROTOCOL *This)
 	ewdbg("PCI xHCI [%x:%x] %d.%d.%d", INTEL_VID, XHCI_PID,
 	      PCI_BUS(pci_dev), PCI_SLOT(pci_dev), PCI_FUNC(pci_dev));
 
-	addr = pci_read_config32(pci_dev, PCI_BASE_ADDRESS_0);
-	addr = addr & ~0xf;
+	addr_hci = (UINTN)pci_read_bar64(pci_dev);
+	ewdbg("xHCI BaseAddress =0x%llx\n", (uint64_t)addr_hci);
 
 	/* enable xHCI bus master and I/O access */
 	pci_command = pci_read_config32(pci_dev, PCI_COMMAND);
@@ -836,7 +853,7 @@ _usb_init_xdci(EFI_USB_DEVICE_MODE_PROTOCOL *This)
 	pci_write_config32(pci_dev, PCI_COMMAND, pci_command);
 
 	/* configure device role */
-	usb_reg_write(addr, R_XHCI_MEM_DUAL_ROLE_CFG0, CFG0_DEVICE_ROLE_CONFIG);
+	usb_reg_write(addr_hci, R_XHCI_MEM_DUAL_ROLE_CFG0, CFG0_DEVICE_ROLE_CONFIG);
 
 	/* disable xHCI bus master and I/O access */
 	pci_command &= ~(PCI_COMMAND_MASTER | PCI_COMMAND_MEMORY);
