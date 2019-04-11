@@ -38,4 +38,5 @@ LOCAL_GENERATED_SOURCES := $(GEN)
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)
 LOCAL_CFLAGS := $(EFIWRAPPER_CFLAGS)
 LOCAL_C_INCLUDES += $(LOCAL_PATH)/../include/hardware
+LOCAL_C_INCLUDES += $(LOCAL_PATH)/../../external/coreboot/payloads/libpayload/include
 include $(BUILD_IAFW_STATIC_LIBRARY)
