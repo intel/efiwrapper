@@ -60,7 +60,7 @@
 static const char *get_hwver_token(const char *hwver, size_t index,
 				   char *token, size_t token_size)
 {
-	char *data, *cur;
+	char *data, *cur, *ret;
 	size_t i;
 
 	data = strdup(hwver);
@@ -68,21 +68,29 @@ static const char *get_hwver_token(const char *hwver, size_t index,
 		return SMBIOS_UNDEFINED;
 
 	cur = strtok(data, ",");
-	if (!cur)
-		return SMBIOS_UNDEFINED;
+	if (!cur) {
+		ret = SMBIOS_UNDEFINED;
+		goto fail;
+	}
 
 	for (i = 0; i < index; i++) {
 		cur = strtok(NULL, ",");
-		if (!cur)
-			return SMBIOS_UNDEFINED;
+		if (!cur) {
+			ret = SMBIOS_UNDEFINED;
+			goto fail;
+		}
 	}
 
-	if (strlen(cur) > token_size)
-		return SMBIOS_UNDEFINED;
+	if (strlen(cur) > token_size) {
+		ret = SMBIOS_UNDEFINED;
+		goto fail;
+	}
 
 	strcpy(token, cur);
+	ret = token;
+fail:
 	free(data);
-	return token;
+	return ret;
 }
 
 static const char *get_platform_id(const char *str)
