@@ -153,6 +153,7 @@ EFI_STATUS storage_init(EFI_SYSTEM_TABLE *st, storage_t *storage,
 			EFI_HANDLE *handle)
 {
 	EFI_STATUS ret, tmp_ret;
+	int res;
 	size_t i, j;
 	media_t *media;
 
@@ -171,6 +172,10 @@ EFI_STATUS storage_init(EFI_SYSTEM_TABLE *st, storage_t *storage,
 
 	*handle = NULL;
 	for (i = 0; i < ARRAY_SIZE(STORAGE_INTERFACES); i++) {
+		res = strcmp("eraseblock", STORAGE_INTERFACES[i].name);
+		if (!res && (boot_dev.type != STORAGE_VIRTUAL))
+			continue;
+
 		ret = STORAGE_INTERFACES[i].init(st, media, handle);
 		if (EFI_ERROR(ret)) {
 			ewerr("Failed to register %s interface",
@@ -196,11 +201,16 @@ EFI_STATUS storage_free(EFI_SYSTEM_TABLE *st, EFI_HANDLE handle)
 {
 	EFI_STATUS ret;
 	size_t i;
+	int res;
 
 	if (!st || !handle)
 		return EFI_INVALID_PARAMETER;
 
 	for (i = 0; i < ARRAY_SIZE(STORAGE_INTERFACES); i++) {
+		res = strcmp("eraseblock", STORAGE_INTERFACES[i].name);
+		if (!res && (boot_dev.type != STORAGE_VIRTUAL))
+			continue;
+
 		ret = STORAGE_INTERFACES[i].free(st, handle);
 		if (EFI_ERROR(ret)) {
 			ewerr("Failed to unregister %s interface",
