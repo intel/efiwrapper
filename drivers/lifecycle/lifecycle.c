@@ -37,19 +37,16 @@
 #include "lifecycle/LifeCycleProtocol.h"
 #include "lifecycle/lifecycle.h"
 
-#define HECI1_HFS 0x40
+#define HECI1_FW_STS6 0x6c
 
-typedef union hfs1 {
+typedef union hfs6 {
 	struct {
-		u32 working_state: 4;	/* Current working state */
-		u32 manuf_mode: 1;	/* Manufacturing mode */
-		u32 part_tbl_status: 1;	/* Indicates status of flash
-					 * partition table */
-		u32 reserved: 25; 	/* Reserved for further use */
-		u32 d0i3_support: 1;	/* Indicates D0i3 support */
+		u32 reserved1: 30;	/* Reserved */
+		u32 eom_mode: 1;	/* eom mode */
+		u32 reserved2: 1;	/* Reserved */
 	} field;
 	u32 data;
-} hfs1_t;
+} hfs6_t;
 
 static struct {
 	u16 vid;
@@ -63,7 +60,7 @@ get_life_cycle_state(__attribute__((__unused__)) EFI_LIFE_CYCLE_STATE_PROTOCOL *
 		     EFI_LIFE_CYCLE_STATE *LifeCycleState)
 {
 	pcidev_t pci_dev = 0;
-	hfs1_t status;
+	hfs6_t status;
 	size_t i;
 
 	for (i = 0; i < ARRAY_SIZE(SUPPORTED_DEVICES); i++)
@@ -75,9 +72,9 @@ get_life_cycle_state(__attribute__((__unused__)) EFI_LIFE_CYCLE_STATE_PROTOCOL *
 	if (!pci_dev)
 		return EFI_UNSUPPORTED;
 
-	status.data = pci_read_config32(pci_dev, HECI1_HFS);
+	status.data = pci_read_config32(pci_dev, HECI1_FW_STS6);
 
-	if (status.field.manuf_mode)
+	if (!status.field.eom_mode)
 		*LifeCycleState = LC_STATE_MANUFACTURING;
 	else
 		*LifeCycleState = LC_STATE_ENDUSER;
