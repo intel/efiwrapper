@@ -12,9 +12,11 @@ OBJS := main.o \
 	image.o \
 	pe.o \
 	host_time.o \
-	terminal_conin.o
+	terminal_curses_conin.o \
+	terminal_curses_conout.o \
+	terminal_curses.o
 
-LDFLAGS := -lX11 -lpthread
+LDFLAGS := -lX11 -lpthread -lncurses
 
 efiwrapper_host-$(TARGET_BUILD_VARIANT): $(OBJS) $(EW_LIB)
 	$(CC) $(CFLAGS) $(GNU_EFI_INCS) $(LDFLAGS) $^ -o $@

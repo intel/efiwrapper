@@ -56,7 +56,7 @@
 #include "gop.h"
 #include "image.h"
 #include "host_time.h"
-#include "terminal_conin.h"
+#include "terminal_curses.h"
 
 static ewdrv_t *host_drivers[] = {
 	&disk_drv,
@@ -66,7 +66,7 @@ static ewdrv_t *host_drivers[] = {
 	&gop_drv,
 	&image_drv,
 	&time_drv,
-	&terminal_conin_drv,
+	&terminal_curses_drv,
 	NULL
 };
 ewdrv_t **ew_drivers = host_drivers;
