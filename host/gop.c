@@ -252,6 +252,7 @@ static void *draw(void *arg)
 		XDestroyImage(gop->img);
 		gop->img = NULL;
 	}
+	XFreeGC(gop->display, gop->gc);
 	XUnmapWindow(gop->display, gop->win);
 	XDestroyWindow(gop->display, gop->win);
 	XFree(vi);
