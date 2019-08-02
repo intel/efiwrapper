@@ -181,7 +181,7 @@ static EFI_STATUS load_and_execute(const char *path,
 {
 	EFI_STATUS ret;
 	EFI_RESET_SYSTEM saved_reset_rs;
-	EFI_HANDLE image;
+	EFI_HANDLE image = NULL;
 	void *data;
 	UINTN size;
 	int setjmpret;
@@ -191,7 +191,7 @@ static EFI_STATUS load_and_execute(const char *path,
 		return ret;
 
 	ret = uefi_call_wrapper(st->BootServices->LoadImage, 6,
-				FALSE, image, NULL,
+				FALSE, parent, NULL,
 				data, size, &image);
 	free(data);
 	if (EFI_ERROR(ret)) {
