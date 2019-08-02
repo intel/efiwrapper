@@ -33,7 +33,7 @@
 #include <efi.h>
 #include <efiapi.h>
 #include <protocol/EraseBlock.h>
-#include <media.h>
+#include "media.h"
 
 EFI_STATUS erase_block_init(EFI_SYSTEM_TABLE *st, media_t *media, EFI_HANDLE *handle);
 EFI_STATUS erase_block_free(EFI_SYSTEM_TABLE *st, EFI_HANDLE handle);

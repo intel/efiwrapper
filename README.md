@@ -78,6 +78,8 @@ Dependencies
 * drivers/*: most of these drivers depends on the `libpayload` library
   from the [Coreboot](https://www.coreboot.org/) project.
 
+* host/gop.c: libx11 devel library
+
 Copyright and Licence
 ---------------------
 EfiWrapper is licensed under the terms of the BSD 2-Clause.

@@ -57,7 +57,7 @@ static EFI_STATUS read_block(media_t *media, EFI_LBA lba,
 }
 
 static EFIAPI EFI_STATUS
-diskio_read(struct _EFI_DISK_IO *This,
+diskio_read(EFI_DISK_IO_PROTOCOL *This,
 	    UINT32 MediaId,
 	    UINT64 Offset,
 	    UINTN BufferSize,
@@ -120,7 +120,7 @@ diskio_read(struct _EFI_DISK_IO *This,
 }
 
 static EFIAPI EFI_STATUS
-diskio_write(struct _EFI_DISK_IO *This,
+diskio_write(EFI_DISK_IO_PROTOCOL *This,
 	     UINT32 MediaId,
 	     UINT64 Offset,
 	     UINTN BufferSize,

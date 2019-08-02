@@ -56,7 +56,7 @@
 #include "gop.h"
 #include "image.h"
 #include "host_time.h"
-#include "terminal_conin.h"
+#include "terminal_curses.h"
 
 static ewdrv_t *host_drivers[] = {
 	&disk_drv,
@@ -66,7 +66,7 @@ static ewdrv_t *host_drivers[] = {
 	&gop_drv,
 	&image_drv,
 	&time_drv,
-	&terminal_conin_drv,
+	&terminal_curses_drv,
 	NULL
 };
 ewdrv_t **ew_drivers = host_drivers;
@@ -181,7 +181,7 @@ static EFI_STATUS load_and_execute(const char *path,
 {
 	EFI_STATUS ret;
 	EFI_RESET_SYSTEM saved_reset_rs;
-	EFI_HANDLE image;
+	EFI_HANDLE image = NULL;
 	void *data;
 	UINTN size;
 	int setjmpret;
@@ -191,7 +191,7 @@ static EFI_STATUS load_and_execute(const char *path,
 		return ret;
 
 	ret = uefi_call_wrapper(st->BootServices->LoadImage, 6,
-				FALSE, image, NULL,
+				FALSE, parent, NULL,
 				data, size, &image);
 	free(data);
 	if (EFI_ERROR(ret)) {
