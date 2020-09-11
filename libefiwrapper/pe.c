@@ -162,8 +162,8 @@ typedef struct {
 	UINT32 end;
 } loaded_section_t;
 
-void get_section_boundaries(section_header_t *section, UINT16 nb,
-			     UINT32 *start, UINT32 *end)
+static void get_section_boundaries(section_header_t *section, UINT16 nb,
+				   UINT32 *start, UINT32 *end)
 {
 	UINT16 i;
 
