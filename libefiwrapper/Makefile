@@ -25,7 +25,9 @@ OBJS := ewvar.o \
 	ewarg.o \
 	sdio.o \
 	ewlib.o \
-	eraseblk.o
+	eraseblk.o \
+	image.o \
+	pe.o
 
 $(EW_LIB): $(OBJS)
 	$(AR) rcs $@ $^

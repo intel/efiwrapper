@@ -22,7 +22,9 @@ LIBEFIWRAPPER_SRC_FILES := \
 	ewarg.c \
 	sdio.c \
 	ewlib.c \
-	eraseblk.c
+	eraseblk.c \
+	image.c \
+	pe.c
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := libefiwrapper-$(TARGET_BUILD_VARIANT)

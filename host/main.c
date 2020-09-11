@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Intel Corporation
+ * Copyright (c) 2016-2020, Intel Corporation
  * All rights reserved.
  *
  * Author: Jérémy Compostella <jeremy.compostella@intel.com>
@@ -54,7 +54,6 @@
 #include "tcp4.h"
 #include "fileio.h"
 #include "gop.h"
-#include "image.h"
 #include "host_time.h"
 #include "terminal_conin.h"
 
@@ -64,7 +63,6 @@ static ewdrv_t *host_drivers[] = {
 	&tcp4_drv,
 	&fileio_drv,
 	&gop_drv,
-	&image_drv,
 	&time_drv,
 	&terminal_conin_drv,
 	NULL

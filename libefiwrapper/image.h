@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Intel Corporation
+ * Copyright (c) 2016-2020, Intel Corporation
  * All rights reserved.
  *
  * Author: Jérémy Compostella <jeremy.compostella@intel.com>
@@ -32,17 +32,24 @@
 #ifndef _IMAGE_H_
 #define _IMAGE_H_
 
+#if defined(HOST)
 #include <setjmp.h>
+#endif
 #include <ewdrv.h>
 
 typedef struct image {
 	EFI_LOADED_IMAGE prot;
 	void *data;
+#if defined(HOST)
 	jmp_buf jmp;
+#endif
 	EFI_IMAGE_ENTRY_POINT entry;
 	EFI_STATUS exit_status;
 } image_t;
 
 extern ewdrv_t image_drv;
+
+EFI_STATUS image_init(EFI_SYSTEM_TABLE *st);
+EFI_STATUS image_free(EFI_SYSTEM_TABLE *st);
 
 #endif	/* _IMAGE_H_ */

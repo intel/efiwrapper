@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Intel Corporation
+ * Copyright (c) 2016-2020, Intel Corporation
  * All rights reserved.
  *
  * Author: Jérémy Compostella <jeremy.compostella@intel.com>
@@ -35,6 +35,7 @@
 #include "ewarg.h"
 #include "ewlog.h"
 #include "ewvar.h"
+#include "image.h"
 #include "lib.h"
 #include "rs.h"
 #include "serialio.h"
@@ -90,7 +91,8 @@ static struct component {
 	{ "console in", conin_init, conin_free },
 	{ "console out", conout_init, conout_free },
 	{ "serial", serialio_init, serialio_free },
-	{ "smbios", smbios_init, smbios_free }
+	{ "smbios", smbios_init, smbios_free },
+	{ "image", image_init, image_free }
 };
 
 EFI_STATUS set_load_options(int argc, char **argv)

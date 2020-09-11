@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Intel Corporation
+ * Copyright (c) 2016-2020, Intel Corporation
  * All rights reserved.
  *
  * Author: Jérémy Compostella <jeremy.compostella@intel.com>
@@ -60,6 +60,9 @@ void *realloc(void *ptr, size_t size);
 long int strtol(const char *s, char **nptr, int base);
 unsigned long long int strtoull(const char *ptr, char **endptr, int base);
 long atol(const char *nptr);
+
+/* malloc.h */
+void *memalign(size_t align, size_t size);
 
 /* string.h */
 int memcmp(const void *s1, const void *s2, size_t n);
