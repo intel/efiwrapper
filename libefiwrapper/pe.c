@@ -133,7 +133,7 @@ typedef struct {
 	struct {
 		std_coff_t std;
 		win_t win;
-		struct {
+		struct data_directory {
 			UINT32 address;
 			UINT32 size;
 		} data_directory[16];
@@ -152,6 +152,30 @@ typedef struct {
 	UINT16 number_of_line_numbers;
 	UINT32 characteristics;
 } section_header_t;
+
+typedef struct {
+	UINT32  virtual_address;
+	UINT32  size_of_block;
+} relocation_t;
+
+typedef enum {
+      ABSOLUTE,
+      HIGH,
+      LOW,
+      HIGHLOW,
+      HIGHADJ,
+      MACHINE_SPECIFIC_5,
+      RESERVED,
+      MACHINE_SPECIFIC_7,
+      MACHINE_SPECIFIC_8,
+      MACHINE_SPECIFIC_9,
+      DIR64
+} fixup_type_t;
+
+typedef struct {
+	UINT16 offset: 12;
+	UINT8 type: 4;
+} fixup_t;
 
 #pragma pack()
 
@@ -181,7 +205,7 @@ static void get_section_boundaries(section_header_t *section, UINT16 nb,
 
 static EFI_STATUS load_sections(section_header_t *section, UINT16 nb,
 				void *base, image_t *image,
-				size_t alignment)
+				size_t alignment, loaded_section_t **data_p)
 {
 	loaded_section_t *data;
 	UINT16 i;
@@ -229,7 +253,31 @@ static EFI_STATUS load_sections(section_header_t *section, UINT16 nb,
 			ewdbg(".text section loaded at %p", dst);
 	}
 
+	*data_p = data;
 	return EFI_SUCCESS;
+}
+
+static void relocate(loaded_section_t *data, UINT32 base, relocation_t *table,
+		     UINT32 size)
+{
+	relocation_t *table_end = (relocation_t *)((UINT8 *)table + size);
+	unsigned long diff = (unsigned long)data->addr - base - data->start;
+
+	while (table < table_end) {
+		fixup_t *fixup = (fixup_t *)&table[1];
+		fixup_t *fixup_end = (fixup_t *)((char *)table + table->size_of_block);
+		unsigned char *mem = (unsigned char *)data->addr +
+			table->virtual_address - data->start;
+
+		for (; fixup < fixup_end; fixup++) {
+			if (*(UINT16 *)fixup == 0)
+				break;
+			if (fixup->type != HIGHLOW)
+				continue;
+			*(UINT32 *)&mem[fixup->offset] += diff;
+		}
+		table = (relocation_t *)fixup_end;
+	}
 }
 
 EFI_STATUS pe_load(void *data, UINTN size, image_t *image)
@@ -238,6 +286,8 @@ EFI_STATUS pe_load(void *data, UINTN size, image_t *image)
 	dos_header_t *dos_hdr;
 	pe_coff_t *pe;
 	char *entry;
+	loaded_section_t *section;
+	struct data_directory *reloc_dir;
 
 	if (!data || !size || !image)
 		return EFI_INVALID_PARAMETER;
@@ -261,9 +311,15 @@ EFI_STATUS pe_load(void *data, UINTN size, image_t *image)
 
 	ret = load_sections((section_header_t *)(pe + 1),
 			    pe->hdr.number_of_sections,
-			    data, image, pe->opt.win.section_alignment);
+			    data, image, pe->opt.win.section_alignment,
+			    &section);
 	if (EFI_ERROR(ret))
 		return ret;
+
+	reloc_dir = &pe->opt.data_directory[BASERELOC_DIRECTORY_ENTRY];
+	relocate((loaded_section_t *)image->data, pe->opt.win.image_base,
+		 section->addr + reloc_dir->address - section->start,
+		 reloc_dir->size);
 
 	entry = (char *)((loaded_section_t *)image->data)->addr;
 	entry += pe->opt.std.address_of_entry_point;
