@@ -103,7 +103,7 @@ typedef struct {
 } std_coff_t;
 
 typedef struct {
-	UINT32 image_base;
+	unsigned long image_base;
 	UINT32 section_alignment;
 	UINT32 file_alignment;
 	UINT16 major_operating_system_version;
@@ -118,10 +118,10 @@ typedef struct {
 	UINT32 checksum;
 	UINT16 subsystem;
 	UINT16 dll_characteristics;
-	UINT32 size_of_stack_reserve;
-	UINT32 size_of_stack_commit;
-	UINT32 size_of_heap_reserve;
-	UINT32 size_of_heap_commit;
+	unsigned long size_of_stack_reserve;
+	unsigned long size_of_stack_commit;
+	unsigned long size_of_heap_reserve;
+	unsigned long size_of_heap_commit;
 	UINT32 loader_flags;
 	UINT32 number_of_rva_and_sizes;
 } win_t;
@@ -257,8 +257,8 @@ static EFI_STATUS load_sections(section_header_t *section, UINT16 nb,
 	return EFI_SUCCESS;
 }
 
-static void relocate(loaded_section_t *data, UINT32 base, relocation_t *table,
-		     UINT32 size)
+static void relocate(loaded_section_t *data, unsigned long base,
+		     relocation_t *table, UINT32 size)
 {
 	relocation_t *table_end = (relocation_t *)((UINT8 *)table + size);
 	unsigned long diff = (unsigned long)data->addr - base - data->start;
@@ -272,9 +272,17 @@ static void relocate(loaded_section_t *data, UINT32 base, relocation_t *table,
 		for (; fixup < fixup_end; fixup++) {
 			if (*(UINT16 *)fixup == 0)
 				break;
-			if (fixup->type != HIGHLOW)
-				continue;
-			*(UINT32 *)&mem[fixup->offset] += diff;
+			switch (fixup->type) {
+			case HIGHLOW:
+				*(UINT32 *)&mem[fixup->offset] += diff;
+				break;
+			case DIR64:
+				*(UINT64 *)&mem[fixup->offset] += diff;
+				break;
+			default:
+				ewerr("Unsupported relocation type %d",
+				      fixup->type);
+			}
 		}
 		table = (relocation_t *)fixup_end;
 	}
