@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Intel Corporation
+ * Copyright (c) 2018-2020, Intel Corporation
  * All rights reserved.
  *
  * Authors: Jérémy Compostella <jeremy.compostella@intel.com>
@@ -96,7 +96,7 @@ query_mode(EFI_GRAPHICS_OUTPUT_PROTOCOL *This,
 static void get_resolution(pcidev_t dev, UINT32 *width, UINT32 *height,
 			   size_t *pipe)
 {
-	uint32_t mmio, size;
+	unsigned long mmio, size;
 	size_t i;
 
 	mmio = pci_read_config32(dev, 0x10) & ~0xf;
@@ -114,7 +114,7 @@ static void get_resolution(pcidev_t dev, UINT32 *width, UINT32 *height,
 
 static uint8_t *get_framebuffer(pcidev_t dev, size_t pipe)
 {
-	uint32_t mmio, gmaddr, surf;
+	unsigned long mmio, gmaddr, surf;
 
 	mmio = pci_read_config32(dev, 0x10) & ~0xf;
 	surf = read32((void *)(mmio + PLANE_SURF + pipe * PIPE_OFFSET));
@@ -125,7 +125,7 @@ static uint8_t *get_framebuffer(pcidev_t dev, size_t pipe)
 
 static void set_efi_color_order(pcidev_t dev)
 {
-	uint32_t mmio, ctl, surf;
+	unsigned long mmio, ctl, surf;
 	size_t i;
 
 	mmio = pci_read_config32(dev, 0x10) & ~0xf;
