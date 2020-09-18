@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Intel Corporation
+ * Copyright (c) 2016-2020, Intel Corporation
  * All rights reserved.
  *
  * Author: Jérémy Compostella <jeremy.compostella@intel.com>
@@ -45,7 +45,7 @@ conout_output_string(__attribute__((__unused__)) struct _SIMPLE_TEXT_OUTPUT_INTE
 		     CHAR16 *String)
 {
 	while (*String)
-		printf("%c", *String++);
+		putchar(*String++);
 
 	return EFI_SUCCESS;
 }

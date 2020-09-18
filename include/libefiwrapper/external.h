@@ -78,6 +78,7 @@ int strncmp(const char *s1, const char *s2, size_t n);
 int printf(const char *format, ...);
 int snprintf(char *str, size_t size, const char *fmt, ...);
 int getchar(void);
+int putchar(unsigned int i);
 
 /* libpayload.h */
 void ndelay(unsigned int n);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Intel Corporation
+ * Copyright (c) 2016-2020, Intel Corporation
  * All rights reserved.
  *
  * Authors: Jérémy Compostella <jeremy.compostella@intel.com>
@@ -49,7 +49,7 @@ serialio_write(__attribute__((__unused__)) SERIAL_IO_INTERFACE *This,
 		return EFI_INVALID_PARAMETER;
 
 	for (i = 0; i < *BufferSize; i++)
-		printf("%c", ((char *)Buffer)[i]);
+		putchar(((unsigned char *)Buffer)[i]);
 
 	return EFI_SUCCESS;
 }
