@@ -53,7 +53,8 @@ EFI_STATUS conin_init(EFI_SYSTEM_TABLE *st)
 {
 	static SIMPLE_INPUT_INTERFACE conin_default = {
 		.Reset = conin_reset,
-		.ReadKeyStroke = conin_read_key
+		.ReadKeyStroke = conin_read_key,
+		.WaitForKey = (EFI_HANDLE)conin_init
 	};
 
 	if (!st)
