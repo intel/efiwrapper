@@ -251,6 +251,7 @@ static EFI_STATUS gop_init(EFI_SYSTEM_TABLE *st)
 	};
 	pcidev_t pci_dev = 0;
 	size_t i;
+	EFI_STATUS ret;
 
 	if (!st)
 		return EFI_INVALID_PARAMETER;
@@ -277,9 +278,14 @@ static EFI_STATUS gop_init(EFI_SYSTEM_TABLE *st)
 	if (!info.HorizontalResolution || !info.VerticalResolution)
 		return EFI_SUCCESS;
 
-	return interface_init(st, &gop_guid, &gop_handle,
-			      &gop_default, sizeof(gop_default),
-			      (void **)&gop);
+	ret = interface_init(st, &gop_guid, &gop_handle,
+			     &gop_default, sizeof(gop_default),
+			     (void **)&gop);
+	if (EFI_ERROR(ret))
+		return ret;
+
+	set_mode((EFI_GRAPHICS_OUTPUT_PROTOCOL *)gop, 0);
+	return EFI_SUCCESS;
 }
 
 static EFI_STATUS gop_exit(EFI_SYSTEM_TABLE *st)
