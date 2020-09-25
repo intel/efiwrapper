@@ -42,12 +42,15 @@
 #include "ewlog.h"
 #include "heci_impl.h"
 #include "heci_protocol.h"
+#include "heci2_protocol.h"
 
 #define UNUSED_PARAM        __attribute__((__unused__))
 
 #define CPMS                19200
 #define HPET_BASE_ADDRESS   0xFED00000
 #define ClockCycles()       read32((void *)(HPET_BASE_ADDRESS + 0xf0))
+
+static EFI_HECI_PROTOCOL *heci;
 
 static void init_timer(void)
 {
@@ -574,9 +577,77 @@ static EFI_STATUS EFIAPI HeciSubmitCommand(
 	return EFI_UNSUPPORTED;
 }
 
+static EFIAPI EFI_STATUS
+heci2_send_w_ack(UNUSED_PARAM HECI2_DEVICE HeciDev,
+		 UINT32 *Message,
+		 UINT32 Length,
+		 UINT32 *RecLength,
+		 UINT8 HostAddress,
+		 UINT8 MEAddress)
+{
+	return heci->SendwACK(Message, Length, RecLength, HostAddress, MEAddress);
+}
+
+static EFIAPI EFI_STATUS
+heci2_read_msg(UNUSED_PARAM HECI2_DEVICE HeciDev,
+	       UINT32 Blocking,
+	       UINT32 *MessageBody,
+	       UINT32 *Length)
+{
+	return heci->ReadMsg(Blocking, MessageBody, Length);
+}
+
+static EFIAPI EFI_STATUS
+heci2_send_msg(UNUSED_PARAM HECI2_DEVICE HeciDev,
+	       UINT32 *Message,
+	       UINT32 Length,
+	       UINT8 HostAddress,
+	       UINT8 MEAddress)
+{
+	return heci->SendMsg(Message, Length, HostAddress, MEAddress);
+}
+
+static EFIAPI EFI_STATUS
+heci2_reset_heci(UNUSED_PARAM HECI2_DEVICE HeciDev)
+{
+	return heci->ResetHeci();
+}
+
+static EFIAPI EFI_STATUS
+heci2_init_heci(UNUSED_PARAM HECI2_DEVICE HeciDev)
+{
+	return heci->InitHeci();
+}
+
+static EFIAPI EFI_STATUS
+heci2_me_reset_wait(UNUSED_PARAM HECI2_DEVICE HeciDev,
+		    UINT32 Delay)
+{
+	return heci->SeCResetWait(Delay);
+}
+
+static EFIAPI EFI_STATUS
+heci2_re_init_heci(UNUSED_PARAM HECI2_DEVICE HeciDev)
+{
+	return heci->ReInitHeci();
+}
+
+static EFIAPI EFI_STATUS
+heci2_get_me_status(UNUSED_PARAM UINT32 *Status)
+{
+	return heci->GetSeCStatus(Status);
+}
+
+static EFIAPI EFI_STATUS
+heci2_get_me_mode(UINT32 *Mode)
+{
+	return heci->GetSeCMode(Mode);
+}
 
 static EFI_GUID heci_guid = HECI_PROTOCOL_GUID;
 static EFI_HANDLE handle;
+static EFI_GUID heci2_guid = EFI_HECI2_PROTOCOL_GUID;
+static EFI_HANDLE handle2;
 
 static EFI_STATUS heci_init(EFI_SYSTEM_TABLE * st)
 {
@@ -594,11 +665,37 @@ static EFI_STATUS heci_init(EFI_SYSTEM_TABLE * st)
 			.EnableSeCPG = HeciEnableSeCPG,
 			.HeciSubmitCommand = HeciSubmitCommand,
 	};
-	EFI_HECI_PROTOCOL *heci_drv;
+	static struct EFI_HECI2_PROTOCOL_ heci2_default = {
+		.SendwACK = heci2_send_w_ack,
+		.ReadMsg = heci2_read_msg,
+		.SendMsg = heci2_send_msg,
+		.ResetHeci = heci2_reset_heci,
+		.InitHeci = heci2_init_heci,
+		.MeResetWait = heci2_me_reset_wait,
+		.ReInitHeci = heci2_re_init_heci,
+		.GetMeStatus = heci2_get_me_status,
+		.GetMeMode = heci2_get_me_mode
+	};
+	EFI_STATUS ret;
+	EFI_HECI2_PROTOCOL *heci2_drv;
 
-	return interface_init(st, &heci_guid, &handle,
-			      &heci_default, sizeof(heci_default),
-			      (void **)&heci_drv);
+	ret = interface_init(st, &heci_guid, &handle,
+			     &heci_default, sizeof(heci_default),
+			     (void **)&heci);
+	if (EFI_ERROR(ret)) {
+		ewerr("Failed to register HECI protocol");
+		return ret;
+	}
+
+	ret = interface_init(st, &heci2_guid, &handle2,
+			     &heci2_default, sizeof(heci2_default),
+			     (void **)&heci2_drv);
+	if (EFI_ERROR(ret)) {
+		ewerr("Failed to register HECI2 protocol");
+		interface_free(st, &heci_guid, handle);
+	}
+
+	return ret;
 }
 
 static EFI_STATUS heci_exit(EFI_SYSTEM_TABLE * st)
