@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Intel Corporation
+ * Copyright (c) 2016-2020, Intel Corporation
  * All rights reserved.
  *
  * Author: Jérémy Compostella <jeremy.compostella@intel.com>
@@ -83,7 +83,9 @@ start_image(EFI_HANDLE ImageHandle,
 {
 	EFI_STATUS ret;
 	image_t *image;
+#if defined(HOST)
 	int setjmpret;
+#endif
 
 	if (ExitDataSize || ExitData)
 		return EFI_UNSUPPORTED;
@@ -92,9 +94,11 @@ start_image(EFI_HANDLE ImageHandle,
 	if (EFI_ERROR(ret))
 		return ret;
 
+#if defined(HOST)
 	setjmpret = setjmp(image->jmp);
 	if (setjmpret != 0)
 		return image->exit_status;
+#endif
 
 	return image->entry(ImageHandle, saved_st);
 }
@@ -116,8 +120,9 @@ efi_exit(EFI_HANDLE ImageHandle,
 		return ret;
 
 	image->exit_status = ExitStatus;
+#if defined(HOST)
 	longjmp(image->jmp, 1);
-
+#endif
 	return EFI_SUCCESS;
 }
 
@@ -141,7 +146,7 @@ static EFI_IMAGE_START saved_start_image;
 static EFI_EXIT saved_efi_exit;
 static EFI_IMAGE_UNLOAD saved_unload_image;
 
-static EFI_STATUS image_init(EFI_SYSTEM_TABLE *st)
+EFI_STATUS image_init(EFI_SYSTEM_TABLE *st)
 {
 	if (!st)
 		return EFI_INVALID_PARAMETER;
@@ -161,7 +166,7 @@ static EFI_STATUS image_init(EFI_SYSTEM_TABLE *st)
 	return EFI_SUCCESS;
 }
 
-static EFI_STATUS image_exit(EFI_SYSTEM_TABLE *st)
+EFI_STATUS image_free(EFI_SYSTEM_TABLE *st)
 {
 	if (!st)
 		return EFI_INVALID_PARAMETER;
@@ -173,10 +178,3 @@ static EFI_STATUS image_exit(EFI_SYSTEM_TABLE *st)
 
 	return EFI_SUCCESS;
 }
-
-ewdrv_t image_drv = {
-	.name = "image",
-	.description = "PE/COFF image",
-	.init = image_init,
-	.exit = image_exit
-};

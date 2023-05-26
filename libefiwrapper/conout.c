@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Intel Corporation
+ * Copyright (c) 2016-2020, Intel Corporation
  * All rights reserved.
  *
  * Author: Jérémy Compostella <jeremy.compostella@intel.com>
@@ -34,9 +34,12 @@
 #include "lib.h"
 
 static EFIAPI EFI_STATUS
-conout_reset(__attribute__((__unused__)) struct _SIMPLE_TEXT_OUTPUT_INTERFACE *This,
+conout_reset(struct _SIMPLE_TEXT_OUTPUT_INTERFACE *This,
 	     __attribute__((__unused__)) BOOLEAN ExtendedVerification)
 {
+	This->SetCursorPosition(This, 0, 0);
+	This->ClearScreen(This);
+	This->EnableCursor(This, FALSE);
 	return EFI_SUCCESS;
 }
 
@@ -45,7 +48,7 @@ conout_output_string(__attribute__((__unused__)) struct _SIMPLE_TEXT_OUTPUT_INTE
 		     CHAR16 *String)
 {
 	while (*String)
-		printf("%c", *String++);
+		putchar(*String++);
 
 	return EFI_SUCCESS;
 }
@@ -59,46 +62,93 @@ conout_test_string(__attribute__((__unused__)) struct _SIMPLE_TEXT_OUTPUT_INTERF
 
 static EFIAPI EFI_STATUS
 conout_query_mode(__attribute__((__unused__)) struct _SIMPLE_TEXT_OUTPUT_INTERFACE *This,
-		  __attribute__((__unused__)) UINTN ModeNumber,
-		  __attribute__((__unused__)) UINTN *Columns,
-		  __attribute__((__unused__)) UINTN *Rows)
+		  UINTN ModeNumber,
+		  UINTN *Columns,
+		  UINTN *Rows)
 {
-	return EFI_UNSUPPORTED;
+	if (ModeNumber)
+		return EFI_UNSUPPORTED;
+
+	*Columns = 80;
+	*Rows = 25;
+
+	return EFI_SUCCESS;
 }
 
 static EFIAPI EFI_STATUS
 conout_set_mode(__attribute__((__unused__)) struct _SIMPLE_TEXT_OUTPUT_INTERFACE *This,
-		__attribute__((__unused__)) UINTN ModeNumber)
+		UINTN ModeNumber)
 {
-	return EFI_UNSUPPORTED;
+	return ModeNumber ? EFI_UNSUPPORTED : EFI_SUCCESS;
 }
 
 static EFIAPI EFI_STATUS
 conout_set_attribute(__attribute__((__unused__)) struct _SIMPLE_TEXT_OUTPUT_INTERFACE *This,
-		     __attribute__((__unused__)) UINTN Attribute)
+		     UINTN Attribute)
 {
-	return EFI_UNSUPPORTED;
+	static const int FOREGROUND_COLOR[] = {
+		[EFI_BLACK]		    = 30,
+		[EFI_BLUE]		    = 34,
+		[EFI_GREEN]		    = 32,
+		[EFI_CYAN]		    = 36,
+		[EFI_RED]		    = 31,
+		[EFI_MAGENTA]		    = 35,
+		[EFI_BROWN]		    = 37,	/* Default to white */
+		[EFI_LIGHTGRAY]		    = 90,
+		[EFI_BRIGHT]		    = 37,	/* Default to white */
+		[EFI_LIGHTBLUE]		    = 94,
+		[EFI_LIGHTGREEN]	    = 92,
+		[EFI_LIGHTCYAN]		    = 96,
+		[EFI_LIGHTRED]		    = 91,
+		[EFI_LIGHTMAGENTA]	    = 95,
+		[EFI_YELLOW]		    = 33,
+		[EFI_WHITE]		    = 37
+	};
+
+	static const int BACKGROUND_COLOR[]	= {
+		[EFI_BACKGROUND_BLACK >> 4]	= 40,
+		[EFI_BACKGROUND_BLUE >> 4]	= 44,
+		[EFI_BACKGROUND_GREEN >> 4]	= 42,
+		[EFI_BACKGROUND_CYAN >> 4]	= 46,
+		[EFI_BACKGROUND_RED >> 4]	= 41,
+		[EFI_BACKGROUND_MAGENTA >> 4]   = 45,
+		[EFI_BACKGROUND_BROWN >> 4]	= 40,	/* Default to black */
+		[EFI_BACKGROUND_LIGHTGRAY >> 4] = 47,
+	};
+
+	if (Attribute == 0x0) {
+		printf("\e[0m");
+		return EFI_SUCCESS;
+	}
+
+	printf("\e[%d;%dm", FOREGROUND_COLOR[Attribute & 0xF],
+	       BACKGROUND_COLOR[(Attribute >> 4) & 0x7]);
+
+	return EFI_SUCCESS;
 }
 
 static EFIAPI EFI_STATUS
 conout_clear_screen(__attribute__((__unused__)) struct _SIMPLE_TEXT_OUTPUT_INTERFACE *This)
 {
-	return EFI_UNSUPPORTED;
+	printf("\e[2J");
+	return EFI_SUCCESS;
 }
 
 static EFIAPI EFI_STATUS
 conout_set_cursor_position(__attribute__((__unused__)) struct _SIMPLE_TEXT_OUTPUT_INTERFACE *This,
-			   __attribute__((__unused__)) UINTN Column,
-			   __attribute__((__unused__)) UINTN Row)
+			   UINTN Column,
+			   UINTN Row)
 {
-	return EFI_UNSUPPORTED;
+	printf("\e[%zd;%zdH", Row + 1, Column + 1);
+	return EFI_SUCCESS;
 }
 
 static EFIAPI EFI_STATUS
 conout_enable_cursor(__attribute__((__unused__)) struct _SIMPLE_TEXT_OUTPUT_INTERFACE *This,
-		     __attribute__((__unused__)) BOOLEAN Enable)
+		     BOOLEAN Enable)
 {
-	return EFI_UNSUPPORTED;
+	printf(Enable ? "\e[?25h" : "\e[?25l");
+	return EFI_SUCCESS;
 }
 
 static SIMPLE_TEXT_OUTPUT_MODE mode;

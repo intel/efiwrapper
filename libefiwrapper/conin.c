@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Intel Corporation
+ * Copyright (c) 2016-2020, Intel Corporation
  * All rights reserved.
  *
  * Author: Jérémy Compostella <jeremy.compostella@intel.com>
@@ -41,9 +41,10 @@ conin_reset(__attribute__((__unused__)) struct _SIMPLE_INPUT_INTERFACE *This,
 
 static EFIAPI EFI_STATUS
 conin_read_key(__attribute__((__unused__)) struct _SIMPLE_INPUT_INTERFACE *This,
-	       __attribute__((__unused__)) EFI_INPUT_KEY *Key)
+	       EFI_INPUT_KEY *Key)
 {
-	return EFI_NOT_FOUND;
+	Key->UnicodeChar = getchar();
+	return EFI_SUCCESS;
 }
 
 static EFI_GUID guid = SIMPLE_TEXT_OUTPUT_PROTOCOL;
@@ -52,7 +53,8 @@ EFI_STATUS conin_init(EFI_SYSTEM_TABLE *st)
 {
 	static SIMPLE_INPUT_INTERFACE conin_default = {
 		.Reset = conin_reset,
-		.ReadKeyStroke = conin_read_key
+		.ReadKeyStroke = conin_read_key,
+		.WaitForKey = (EFI_HANDLE)conin_init
 	};
 
 	if (!st)

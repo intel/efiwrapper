@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Intel Corporation
+ * Copyright (c) 2016-2020, Intel Corporation
  * All rights reserved.
  *
  * Author: Jérémy Compostella <jeremy.compostella@intel.com>
@@ -29,12 +29,16 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stdlib.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <ewlog.h>
 #include <ewlib.h>
-#include <sys/mman.h>
 
+#if defined(HOST)
+#include <sys/mman.h>
+#endif
+
+#include "lib.h"
 #include "pe.h"
 
 /* The following structure definitions come from:
@@ -99,7 +103,7 @@ typedef struct {
 } std_coff_t;
 
 typedef struct {
-	UINTN image_base;
+	unsigned long image_base;
 	UINT32 section_alignment;
 	UINT32 file_alignment;
 	UINT16 major_operating_system_version;
@@ -114,20 +118,22 @@ typedef struct {
 	UINT32 checksum;
 	UINT16 subsystem;
 	UINT16 dll_characteristics;
-	UINTN size_of_stack_reserve;
-	UINTN size_of_stack_commit;
-	UINTN size_of_heap_reserve;
-	UINTN size_of_heap_commit;
+	unsigned long size_of_stack_reserve;
+	unsigned long size_of_stack_commit;
+	unsigned long size_of_heap_reserve;
+	unsigned long size_of_heap_commit;
 	UINT32 loader_flags;
 	UINT32 number_of_rva_and_sizes;
 } win_t;
+
+#define BASERELOC_DIRECTORY_ENTRY 5
 
 typedef struct {
 	coff_header_t hdr;
 	struct {
 		std_coff_t std;
 		win_t win;
-		struct {
+		struct data_directory {
 			UINT32 address;
 			UINT32 size;
 		} data_directory[16];
@@ -147,6 +153,30 @@ typedef struct {
 	UINT32 characteristics;
 } section_header_t;
 
+typedef struct {
+	UINT32  virtual_address;
+	UINT32  size_of_block;
+} relocation_t;
+
+typedef enum {
+      ABSOLUTE,
+      HIGH,
+      LOW,
+      HIGHLOW,
+      HIGHADJ,
+      MACHINE_SPECIFIC_5,
+      RESERVED,
+      MACHINE_SPECIFIC_7,
+      MACHINE_SPECIFIC_8,
+      MACHINE_SPECIFIC_9,
+      DIR64
+} fixup_type_t;
+
+typedef struct {
+	UINT16 offset: 12;
+	UINT8 type: 4;
+} fixup_t;
+
 #pragma pack()
 
 typedef struct {
@@ -156,8 +186,8 @@ typedef struct {
 	UINT32 end;
 } loaded_section_t;
 
-void get_section_boundaries(section_header_t *section, UINT16 nb,
-			     UINT32 *start, UINT32 *end)
+static void get_section_boundaries(section_header_t *section, UINT16 nb,
+				   UINT32 *start, UINT32 *end)
 {
 	UINT16 i;
 
@@ -165,14 +195,17 @@ void get_section_boundaries(section_header_t *section, UINT16 nb,
 	*end = 0;
 
 	for (i = 0; i < nb; i++) {
+		UINT32 size = section[i].virtual_size;
+		if (section[i].size_of_raw_data)
+			size = section[i].size_of_raw_data;
 		*start = min(*start, section[i].virtual_address);
-		*end = max(*end, section[i].virtual_address +
-			   section[i].virtual_size);
+		*end = max(*end, section[i].virtual_address + size);
 	}
 }
 
-EFI_STATUS load_sections(section_header_t *section, UINT16 nb,
-			 void *base, image_t *image)
+static EFI_STATUS load_sections(section_header_t *section, UINT16 nb,
+				void *base, image_t *image,
+				size_t alignment, loaded_section_t **data_p)
 {
 	loaded_section_t *data;
 	UINT16 i;
@@ -188,9 +221,13 @@ EFI_STATUS load_sections(section_header_t *section, UINT16 nb,
 	get_section_boundaries(section, nb, &data->start, &data->end);
 
 	data->size = data->end - data->start;
+#if defined(HOST)
 	data->addr = mmap(NULL, data->size, PROT_EXEC | PROT_READ | PROT_WRITE,
 			  MAP_ANONYMOUS | MAP_SHARED, -1, 0);
-	if (!data->addr) {
+#else
+	data->addr = memalign(alignment, data->size);
+#endif
+	if (data->addr == (void *) -1 || data->addr == NULL) {
 		ewerr("Failed to allocate sections memory");
 		free(data);
 		return EFI_OUT_OF_RESOURCES;
@@ -205,7 +242,7 @@ EFI_STATUS load_sections(section_header_t *section, UINT16 nb,
 			data->start;
 		size = section[i].virtual_size;
 
-		if (!size && section[i].size_of_raw_data)
+		if (section[i].size_of_raw_data)
 			size = section[i].size_of_raw_data;
 		memcpy(dst, src, size);
 
@@ -216,7 +253,39 @@ EFI_STATUS load_sections(section_header_t *section, UINT16 nb,
 			ewdbg(".text section loaded at %p", dst);
 	}
 
+	*data_p = data;
 	return EFI_SUCCESS;
+}
+
+static void relocate(loaded_section_t *data, unsigned long base,
+		     relocation_t *table, UINT32 size)
+{
+	relocation_t *table_end = (relocation_t *)((UINT8 *)table + size);
+	unsigned long diff = (unsigned long)data->addr - base - data->start;
+
+	while (table < table_end) {
+		fixup_t *fixup = (fixup_t *)&table[1];
+		fixup_t *fixup_end = (fixup_t *)((char *)table + table->size_of_block);
+		unsigned char *mem = (unsigned char *)data->addr +
+			table->virtual_address - data->start;
+
+		for (; fixup < fixup_end; fixup++) {
+			if (*(UINT16 *)fixup == 0)
+				break;
+			switch (fixup->type) {
+			case HIGHLOW:
+				*(UINT32 *)&mem[fixup->offset] += diff;
+				break;
+			case DIR64:
+				*(UINT64 *)&mem[fixup->offset] += diff;
+				break;
+			default:
+				ewerr("Unsupported relocation type %d",
+				      fixup->type);
+			}
+		}
+		table = (relocation_t *)fixup_end;
+	}
 }
 
 EFI_STATUS pe_load(void *data, UINTN size, image_t *image)
@@ -225,6 +294,8 @@ EFI_STATUS pe_load(void *data, UINTN size, image_t *image)
 	dos_header_t *dos_hdr;
 	pe_coff_t *pe;
 	char *entry;
+	loaded_section_t *section;
+	struct data_directory *reloc_dir;
 
 	if (!data || !size || !image)
 		return EFI_INVALID_PARAMETER;
@@ -248,9 +319,15 @@ EFI_STATUS pe_load(void *data, UINTN size, image_t *image)
 
 	ret = load_sections((section_header_t *)(pe + 1),
 			    pe->hdr.number_of_sections,
-			    data, image);
+			    data, image, pe->opt.win.section_alignment,
+			    &section);
 	if (EFI_ERROR(ret))
 		return ret;
+
+	reloc_dir = &pe->opt.data_directory[BASERELOC_DIRECTORY_ENTRY];
+	relocate((loaded_section_t *)image->data, pe->opt.win.image_base,
+		 section->addr + reloc_dir->address - section->start,
+		 reloc_dir->size);
 
 	entry = (char *)((loaded_section_t *)image->data)->addr;
 	entry += pe->opt.std.address_of_entry_point;
@@ -268,7 +345,11 @@ EFI_STATUS pe_unload(image_t *image)
 		return EFI_INVALID_PARAMETER;
 
 	data = image->data;
+#if defined(HOST)
 	munmap(data->addr, data->size);
+#else
+	free(data->addr);
+#endif
 	free(data);
 	image->data = NULL;
 

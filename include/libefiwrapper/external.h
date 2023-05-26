@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Intel Corporation
+ * Copyright (c) 2016-2020, Intel Corporation
  * All rights reserved.
  *
  * Author: Jérémy Compostella <jeremy.compostella@intel.com>
@@ -61,6 +61,9 @@ long int strtol(const char *s, char **nptr, int base);
 unsigned long long int strtoull(const char *ptr, char **endptr, int base);
 long atol(const char *nptr);
 
+/* malloc.h */
+void *memalign(size_t align, size_t size);
+
 /* string.h */
 int memcmp(const void *s1, const void *s2, size_t n);
 void *memcpy(void *dest, const void *src, size_t n);
@@ -74,6 +77,8 @@ int strncmp(const char *s1, const char *s2, size_t n);
 /* stdio.h */
 int printf(const char *format, ...);
 int snprintf(char *str, size_t size, const char *fmt, ...);
+int getchar(void);
+int putchar(unsigned int i);
 
 /* libpayload.h */
 void ndelay(unsigned int n);

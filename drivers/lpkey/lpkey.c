@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Intel Corporation
+ * Copyright (c) 2020, Intel Corporation
  * All rights reserved.
  *
  * Author: Jérémy Compostella <jeremy.compostella@intel.com>
@@ -29,20 +29,64 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _IMAGE_H_
-#define _IMAGE_H_
 
-#include <setjmp.h>
-#include <ewdrv.h>
+#include <kconfig.h>
+#include <libpayload-config.h>
+#include <libpayload.h>
+#include <ewlog.h>
 
-typedef struct image {
-	EFI_LOADED_IMAGE prot;
-	void *data;
-	jmp_buf jmp;
-	EFI_IMAGE_ENTRY_POINT entry;
-	EFI_STATUS exit_status;
-} image_t;
+#include "lpkey/lpkey.h"
 
-extern ewdrv_t image_drv;
+static EFI_CHECK_EVENT saved_check_event;
+static EFI_EVENT wait_for_key;
 
-#endif	/* _IMAGE_H_ */
+static EFIAPI EFI_STATUS
+lpkey_check_event(EFI_EVENT Event)
+{
+	if (Event != wait_for_key)
+		return saved_check_event(Event);
+
+	return havekey() ? EFI_SUCCESS : EFI_NOT_READY;
+}
+
+static EFI_GUID guid = SIMPLE_TEXT_OUTPUT_PROTOCOL;
+
+static EFI_STATUS lpkey_init(EFI_SYSTEM_TABLE *st)
+{
+	EFI_STATUS ret;
+	SIMPLE_INPUT_INTERFACE *input;
+
+	if (!st)
+		return EFI_INVALID_PARAMETER;
+
+	ret = st->BootServices->LocateProtocol(&guid, NULL, (VOID **)&input);
+	if (EFI_ERROR(ret)) {
+		ewerr("Could not locate simple text input protocol");
+		return ret;
+	}
+
+	wait_for_key = input->WaitForKey;
+	saved_check_event = st->BootServices->CheckEvent;
+	st->BootServices->CheckEvent = lpkey_check_event;
+
+	return EFI_SUCCESS;
+}
+
+
+static EFI_STATUS lpkey_exit(EFI_SYSTEM_TABLE *st)
+{
+	if (!st)
+		return EFI_INVALID_PARAMETER;
+
+	st->BootServices->CheckEvent = saved_check_event;
+
+	return EFI_SUCCESS;
+}
+
+ewdrv_t lpkey_drv = {
+	.name = "lpkey",
+	.description = "Provide key event support based on libpayload havekey()",
+	.init = lpkey_init,
+	.exit = lpkey_exit
+};
+

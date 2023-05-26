@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Intel Corporation
+ * Copyright (c) 2016-2020, Intel Corporation
  * All rights reserved.
  *
  * Author: Jérémy Compostella <jeremy.compostella@intel.com>
@@ -95,10 +95,10 @@ EFI_STATUS ewacpi_get_table(EFI_SYSTEM_TABLE *st, const char *name,
 	if (!rsdp->xsdt_address)
 		return EFI_UNSUPPORTED;
 
-	xsdt = (struct xsdt_table *)(UINTN)rsdp->xsdt_address;
+	xsdt = (struct xsdt_table *)(unsigned long)rsdp->xsdt_address;
 	nb = (xsdt->header.length - sizeof(xsdt->header)) / sizeof(xsdt->entry);
 	for (i = 0; i < nb; i++) {
-		cur = (struct acpi_header *)(UINTN)xsdt->entry[i];
+		cur = (struct acpi_header *)(unsigned long)xsdt->entry[i];
 		if (memcmp(name, cur->signature, SIG_SIZE))
 			continue;
 		ret = validate_table(cur);

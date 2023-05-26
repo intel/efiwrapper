@@ -9,8 +9,6 @@ OBJS := main.o \
 	tcp4.o \
 	fileio.o \
 	gop.o \
-	image.o \
-	pe.o \
 	host_time.o \
 	terminal_conin.o
 

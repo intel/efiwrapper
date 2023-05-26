@@ -53,7 +53,7 @@ struct sdhci
 	int  (*wait_boot_done)(struct mmc *m, uintptr_t *dma_addr);
 	void (*boot_stop)(struct mmc *m);
 	int  (*set_mode)(struct mmc *m);
-	int  (*execute_tuning)(struct mmc *m);
+	EFI_STATUS (*execute_tuning)(struct mmc *m);
 
 	uint32_t caps1;
 	uint32_t caps2;

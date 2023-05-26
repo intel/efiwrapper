@@ -831,7 +831,7 @@ _usb_init_xdci(EFI_USB_DEVICE_MODE_PROTOCOL *This)
 	      PCI_BUS(pci_dev), PCI_SLOT(pci_dev), PCI_FUNC(pci_dev));
 
 	config_params.BaseAddress = (UINTN)pci_read_bar64(pci_dev);
-	ewdbg("xDCI BaseAddress =0x%llx\n", (uint64_t)config_params.BaseAddress);
+	ewdbg("xDCI BaseAddress =0x%" PRIx64 "\n", (uint64_t)config_params.BaseAddress);
 
 	/* configure xDCI as a system bus master */
 	pci_command = pci_read_config32(pci_dev, PCI_COMMAND);
@@ -845,7 +845,7 @@ _usb_init_xdci(EFI_USB_DEVICE_MODE_PROTOCOL *This)
 	      PCI_BUS(pci_dev), PCI_SLOT(pci_dev), PCI_FUNC(pci_dev));
 
 	addr_hci = (UINTN)pci_read_bar64(pci_dev);
-	ewdbg("xHCI BaseAddress =0x%llx\n", (uint64_t)addr_hci);
+	ewdbg("xHCI BaseAddress =0x%" PRIx64 "\n", (uint64_t)addr_hci);
 
 	/* enable xHCI bus master and I/O access */
 	pci_command = pci_read_config32(pci_dev, PCI_COMMAND);

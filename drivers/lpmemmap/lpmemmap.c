@@ -226,8 +226,7 @@ get_memory_map(UINTN *MemoryMapSize, EFI_MEMORY_DESCRIPTOR *MemoryMap,
 	UINT32 key;
 	UINTN size;
 
-	if (!MemoryMapSize || !MemoryMap || !MapKey ||
-	    !DescriptorSize || !DescriptorVersion)
+	if (!MemoryMapSize)
 		return EFI_INVALID_PARAMETER;
 
 	if (!efimemmap_nb || !efimemmap)
@@ -239,15 +238,21 @@ get_memory_map(UINTN *MemoryMapSize, EFI_MEMORY_DESCRIPTOR *MemoryMap,
 		return EFI_BUFFER_TOO_SMALL;
 	}
 
-	ret = uefi_call_wrapper(crc32, 3, efimemmap, size, &key);
-	if (EFI_ERROR(ret))
-		return ret;
+	if (MapKey) {
+		ret = uefi_call_wrapper(crc32, 3, efimemmap, size, &key);
+		if (EFI_ERROR(ret))
+			return ret;
+
+		*MapKey = key;
+	}
 
 	*MemoryMapSize = size;
-	memcpy(MemoryMap, efimemmap, size);
-	*MapKey = key;
-	*DescriptorSize = sizeof(*efimemmap);
-	*DescriptorVersion = EFI_MEMORY_DESCRIPTOR_VERSION;
+	if (MemoryMap)
+		memcpy(MemoryMap, efimemmap, size);
+	if (DescriptorSize)
+		*DescriptorSize = sizeof(*efimemmap);
+	if (DescriptorVersion)
+		*DescriptorVersion = EFI_MEMORY_DESCRIPTOR_VERSION;
 
 	return EFI_SUCCESS;
 }

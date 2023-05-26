@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Intel Corporation
+ * Copyright (c) 2016-2020, Intel Corporation
  * All rights reserved.
  *
  * Author: Jérémy Compostella <jeremy.compostella@intel.com>
@@ -349,11 +349,26 @@ locate_handle_buffer(EFI_LOCATE_SEARCH_TYPE SearchType,
 }
 
 static EFIAPI EFI_STATUS
-locate_protocol(__attribute__((__unused__)) EFI_GUID *Protocol,
+locate_protocol(EFI_GUID *Protocol,
 		__attribute__((__unused__)) VOID *Registration,
-		__attribute__((__unused__)) VOID **Interface)
+		VOID **Interface)
 {
-	return EFI_UNSUPPORTED;
+	interface_t *inte;
+	size_t i;
+
+	if (!Interface)
+		return EFI_INVALID_PARAMETER;
+
+	for (i = 0; i < ARRAY_SIZE(INTERFACES); i++) {
+		inte = &INTERFACES[i];
+		if (inte->installed &&
+		    !guidcmp(&inte->protocol, Protocol)) {
+			*Interface = inte->interface;
+			return EFI_SUCCESS;
+		}
+	}
+
+	return EFI_NOT_FOUND;
 }
 
 EFI_STATUS protocol_init_bs(EFI_BOOT_SERVICES *bs)

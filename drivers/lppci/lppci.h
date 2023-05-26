@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Intel Corporation
+ * Copyright (c) 2020, Intel Corporation
  * All rights reserved.
  *
  * Author: Jérémy Compostella <jeremy.compostella@intel.com>
@@ -29,30 +29,11 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _VERSION_H_
-#define _VERSION_H_
+#ifndef _LPPCI_H_
+#define _LPPCI_H_
 
-#if defined(USER)
-#define BUILD_VARIANT           ""
-#elif defined(USERDEBUG)
-#define BUILD_VARIANT           "-userdebug"
-#else
-#define BUILD_VARIANT           "-eng"
-#endif
+#include <ewdrv.h>
 
-#define STRINGIFY(x)	#x
-#define TOSTRING(x)	STRINGIFY(x)
-#define PASTE(a,b)	a##b
-#define HEX(a)		PASTE(0x, a)
+extern ewdrv_t lppci_drv;
 
-#define _EFIWRAPPER_MAJOR	03
-#define _EFIWRAPPER_MINOR	03
-
-#define EFIWRAPPER_MAJOR HEX(_EFIWRAPPER_MAJOR)
-#define EFIWRAPPER_MINOR HEX(_EFIWRAPPER_MINOR)
-
-#define EFIWRAPPER_VERSION ("efiwrapper-"			\
-			    TOSTRING(_EFIWRAPPER_MAJOR) "."	\
-			    TOSTRING(_EFIWRAPPER_MINOR) BUILD_VARIANT)
-
-#endif	/* _VERSION_H_ */
+#endif	/* _LPPCI_H_ */

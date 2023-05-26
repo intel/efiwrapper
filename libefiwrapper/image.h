@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, Intel Corporation
+ * Copyright (c) 2016-2020, Intel Corporation
  * All rights reserved.
  *
  * Author: Jérémy Compostella <jeremy.compostella@intel.com>
@@ -29,30 +29,27 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _VERSION_H_
-#define _VERSION_H_
+#ifndef _IMAGE_H_
+#define _IMAGE_H_
 
-#if defined(USER)
-#define BUILD_VARIANT           ""
-#elif defined(USERDEBUG)
-#define BUILD_VARIANT           "-userdebug"
-#else
-#define BUILD_VARIANT           "-eng"
+#if defined(HOST)
+#include <setjmp.h>
 #endif
+#include <ewdrv.h>
 
-#define STRINGIFY(x)	#x
-#define TOSTRING(x)	STRINGIFY(x)
-#define PASTE(a,b)	a##b
-#define HEX(a)		PASTE(0x, a)
+typedef struct image {
+	EFI_LOADED_IMAGE prot;
+	void *data;
+#if defined(HOST)
+	jmp_buf jmp;
+#endif
+	EFI_IMAGE_ENTRY_POINT entry;
+	EFI_STATUS exit_status;
+} image_t;
 
-#define _EFIWRAPPER_MAJOR	03
-#define _EFIWRAPPER_MINOR	03
+extern ewdrv_t image_drv;
 
-#define EFIWRAPPER_MAJOR HEX(_EFIWRAPPER_MAJOR)
-#define EFIWRAPPER_MINOR HEX(_EFIWRAPPER_MINOR)
+EFI_STATUS image_init(EFI_SYSTEM_TABLE *st);
+EFI_STATUS image_free(EFI_SYSTEM_TABLE *st);
 
-#define EFIWRAPPER_VERSION ("efiwrapper-"			\
-			    TOSTRING(_EFIWRAPPER_MAJOR) "."	\
-			    TOSTRING(_EFIWRAPPER_MINOR) BUILD_VARIANT)
-
-#endif	/* _VERSION_H_ */
+#endif	/* _IMAGE_H_ */

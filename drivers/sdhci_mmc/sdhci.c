@@ -62,11 +62,10 @@ static void sdhci_reset_tuning(struct sdhci *host)
 	sdhci_write16(host, SDHCI_HOST_CTRL2, ctrl);
 }
 
-static int sdhci_abort_tuning(struct sdhci *host)
+static void sdhci_abort_tuning(struct sdhci *host)
 {
 	struct cmd tuning_cmd = {0};
 	struct cmd wait_cmd;
-	int ret;
 
 	sdhci_write32(host, SDHCI_INT_ENABLE, SDHCI_INT_DATA_AVAIL);
 	sdhci_write32(host, SDHCI_SIGNAL_ENABLE, SDHCI_INT_DATA_AVAIL);
@@ -77,18 +76,14 @@ static int sdhci_abort_tuning(struct sdhci *host)
 	tuning_cmd.flags |= CMDF_DATA_XFER | CMDF_USE_DMA;
 	tuning_cmd.flags |= CMDF_WR_XFER;
 
-	ret = mmc_send_cmd(&tuning_cmd);
-	if (ret)
-		return EFI_DEVICE_ERROR;
+	mmc_send_cmd(&tuning_cmd);
 
 	memset(&wait_cmd, 0, sizeof(wait_cmd));
 	wait_cmd.flags = CMDF_DATA_XFER;
-	ret = mmc_wait_cmd_done(&wait_cmd);
-
-	return EFI_SUCCESS;
+	mmc_wait_cmd_done(&wait_cmd);
 }
 
-static int sdhci_send_tuning(struct sdhci *host, uint32_t opcode)
+static EFI_STATUS sdhci_send_tuning(struct sdhci *host, uint32_t opcode)
 {
 	struct cmd tuning_cmd = {0};
 	uint32_t buf[256]={0};
@@ -130,7 +125,7 @@ static int sdhci_send_tuning(struct sdhci *host, uint32_t opcode)
 	return EFI_NOT_READY;
 }
 
-static int sdhci_execute_tuning(struct mmc *m)
+static EFI_STATUS sdhci_execute_tuning(struct mmc *m)
 {
 	struct sdhci *host = m->host;
 	uint32_t ier1;
@@ -138,7 +133,7 @@ static int sdhci_execute_tuning(struct mmc *m)
 	uint16_t ctrl = 0;
 	int counter;
 	int ret = 0;
-	int err = 0;
+	EFI_STATUS err = 0;
 
 	ier1 = sdhci_read32(host, SDHCI_INT_ENABLE);
 	ier2 = sdhci_read32(host, SDHCI_SIGNAL_ENABLE);
