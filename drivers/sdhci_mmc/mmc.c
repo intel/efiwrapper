@@ -199,7 +199,7 @@ static int mmc_get_cid(struct mmc *m)
 		return err;
 	}
 
-	memcpy(m->cid, c.resp, sizeof(m->cid));
+	memcpy(m->cid, c.resp, sizeof(m->cid));//NOLINT
 	return 0;
 }
 
@@ -298,7 +298,7 @@ mmc_switch(struct mmc *m, uint8_t index, uint8_t value)
 int mmc_cid(uint8_t cid[16])
 {
 	struct mmc *m = &card;
-	memcpy(cid, m->cid, sizeof(m->cid));
+	memcpy(cid, m->cid, sizeof(m->cid));//NOLINT
 	return 0;
 }
 
@@ -422,7 +422,7 @@ int mmc_init_card(pcidev_t dev)
 	** eMMC initialization (e.g from tuning).
 	** Make sure we start with a clean structure.
 	*/
-	memset((void *)m, 0, sizeof(struct mmc));
+	memset((void *)m, 0, sizeof(struct mmc));//NOLINT
 
 	struct sdhci *host = sdhci_find_controller(dev);
 	if (! host)

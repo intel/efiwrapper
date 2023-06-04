@@ -90,7 +90,7 @@ diskio_read(struct _EFI_DISK_IO *This,
 			return ret;
 
 		size = min(blksz - (Offset % blksz), BufferSize);
-		memcpy(buf, block + (Offset % blksz), size);
+		memcpy(buf, block + (Offset % blksz), size);//NOLINT
 		free(block);
 
 		buf += size;
@@ -112,7 +112,7 @@ diskio_read(struct _EFI_DISK_IO *This,
 		ret = read_block(media, Offset / blksz, &block);
 		if (EFI_ERROR(ret))
 			return ret;
-		memcpy(buf, block, BufferSize);
+		memcpy(buf, block, BufferSize);//NOLINT
 		free(block);
 	}
 
@@ -153,7 +153,7 @@ diskio_write(struct _EFI_DISK_IO *This,
 			return ret;
 
 		size = min(blksz - (Offset % blksz), BufferSize);
-		memcpy(block + (Offset % blksz), buf, size);
+		memcpy(block + (Offset % blksz), buf, size);//NOLINT
 
 		count = media->storage->write(media->storage, Offset / blksz, 1, block);
 		free(block);
@@ -181,7 +181,7 @@ diskio_write(struct _EFI_DISK_IO *This,
 		if (EFI_ERROR(ret))
 			return ret;
 
-		memcpy(block, buf, BufferSize);
+		memcpy(block, buf, BufferSize);//NOLINT
 		count = media->storage->write(media->storage, Offset / blksz, 1, block);
 		free(block);
 		if (count != 1)

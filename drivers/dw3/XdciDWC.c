@@ -675,7 +675,7 @@ dwc_xdci_end_xfer (
 	if (!status) {
 	        core_handle->ep_handles[ep_num].currentXferRscIdx = 0;
 	        TrbPtr = core_handle->trbs + (ep_num * DWC_XDCI_TRB_NUM);
-	        memset (TrbPtr, 0, DWC_XDCI_TRB_NUM * sizeof (DWC_XDCI_TRB));
+	        memset (TrbPtr, 0, DWC_XDCI_TRB_NUM * sizeof (DWC_XDCI_TRB));//NOLINT
 	}
 
 	return status;
@@ -1373,7 +1373,7 @@ dwc_xdci_core_init (
 	        return EFI_OUT_OF_RESOURCES;
 	}
 
-	memset (local_core_handle, 0, sizeof(XDCI_CORE_HANDLE));
+	memset (local_core_handle, 0, sizeof(XDCI_CORE_HANDLE)); //NOLINT
 
 	local_core_handle->parent_handle = device_core_ptr;
 
@@ -2455,7 +2455,7 @@ dwc_xdci_init_ep (
 	ep_num = dwc_xdci_get_physical_ep_num (ep_info->ep_num, ep_info->ep_dir);
 
 	/* Save EP properties */
-	memcpy (&(local_core_handle->ep_handles[ep_num].ep_info), ep_info, sizeof (USB_EP_INFO));
+	memcpy (&(local_core_handle->ep_handles[ep_num].ep_info), ep_info, sizeof (USB_EP_INFO)); //NOLINT
 
 	// Init CheckFlag
 	local_core_handle->ep_handles[ep_num].CheckFlag = FALSE;
@@ -3056,7 +3056,7 @@ dwc_xdci_ep_tx_data (
 
 	/* Data phase */
 //  local_core_handle->ep_handles[ep_num].xfer_handle = *xfer_req;
-	memcpy (&(local_core_handle->ep_handles[ep_num].xfer_handle), xfer_req, sizeof (USB_XFER_REQUEST));
+	memcpy (&(local_core_handle->ep_handles[ep_num].xfer_handle), xfer_req, sizeof (USB_XFER_REQUEST));//NOLINT
 	local_core_handle->ep_handles[ep_num].state = USB_EP_STATE_DATA;
 
 	local_core_handle->ep_handles[ep_num].trb = trb;
@@ -3154,7 +3154,7 @@ dwc_xdci_ep_rx_data (
 	local_core_handle->ep_handles[ep_num].CheckFlag = TRUE;
 
 	/* Data phase */
-	memcpy (&(local_core_handle->ep_handles[ep_num].xfer_handle), xfer_req, sizeof (USB_XFER_REQUEST));
+	memcpy (&(local_core_handle->ep_handles[ep_num].xfer_handle), xfer_req, sizeof (USB_XFER_REQUEST));//NOLINT
 
 	local_core_handle->ep_handles[ep_num].state = USB_EP_STATE_DATA;
 

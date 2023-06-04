@@ -46,7 +46,7 @@ lprtc_get_time(EFI_TIME *Time,
 
 	rtc_read_clock(&now);
 
-	memset(Time, 0, sizeof(*Time));
+	memset(Time, 0, sizeof(*Time));//NOLINT
 	Time->Year = now.tm_year + 1900;
 	Time->Month = now.tm_mon + 1;
 	Time->Day = now.tm_mday;

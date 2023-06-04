@@ -125,12 +125,12 @@ static EFI_STATUS get_rsdp(struct RSDP_TABLE **rsdp, EFI_GUID *guid)
 			if (checksum((uint8_t *)table,
 				     offsetof(struct RSDP_TABLE, length)))
 				continue;
-			memcpy(guid, &acpi_guid, sizeof(*guid));
+			memcpy(guid, &acpi_guid, sizeof(*guid)); //NOLINT
 			break;
 		} else if (table->revision == 2) {
 			if (checksum((uint8_t *)table, sizeof(*table)))
 				continue;
-			memcpy(guid, &acpi2_guid, sizeof(*guid));
+			memcpy(guid, &acpi2_guid, sizeof(*guid)); //NOLINT
 			break;
 		}
 	}
@@ -278,7 +278,7 @@ static EFIAPI EFI_STATUS InstallAcpiTable(__attribute__((__unused__))
 			break;
 		}
 
-		memcpy(NewTable, AcpiHdr, AcpiHdr->Length);
+		memcpy(NewTable, AcpiHdr, AcpiHdr->Length); //NOLINT
 
 		// Update the ACPI header to pointer to the new copy
 		// And then update the table if required

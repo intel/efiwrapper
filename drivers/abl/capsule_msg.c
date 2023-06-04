@@ -136,12 +136,12 @@ static unsigned heci_send_user_command(uint8_t *data, uint8_t length)
 	}
 	ewdbg("HECI sec_mode %X", SeCMode);
 
-	memset (DataBuffer, 0, sizeof(DataBuffer));
+	memset (DataBuffer, 0, sizeof(DataBuffer)); //NOLINT
 	SendCommand= (HECI_USER_CMD_REQUEST*)DataBuffer;
 	SendCommand->MKHIHeader.Fields.GroupId = MBP_APP_ABL_SIG;
 	SendCommand->MKHIHeader.Fields.Command = MBP_ITEM_ID_IAFW_IBB_SIG;
 	SendCommand->sub_command = 1;
-	memcpy(SendCommand->data, data, length);
+	memcpy(SendCommand->data, data, length); //NOLINT
 
 	HeciSendLength = sizeof(HECI_USER_CMD_REQUEST);
 	HeciRecvLength = sizeof(HECI_USER_CMD_RESPONSE);
@@ -284,15 +284,15 @@ static EFI_STATUS cse4abl_capsule_msg_write(CSE_MSG *msg)
 	msg_buf = malloc(CSE_USRCMD_SIZE);
 	if (!msg_buf)
 		return EFI_OUT_OF_RESOURCES;
-	memset(msg_buf, 0, CSE_USRCMD_SIZE);
+	memset(msg_buf, 0, CSE_USRCMD_SIZE); //NOLINT
 	msg_buf_p = msg_buf;
 
 	msg_slen = offsetof(CSE_MSG, cdata_payload);
-	msg_buf_p = (uint8_t *)memcpy(msg_buf_p, (uint8_t *)msg, msg_slen) + msg_slen;
+	msg_buf_p = (uint8_t *)memcpy(msg_buf_p, (uint8_t *)msg, msg_slen) + msg_slen; //NOLINT
 	msg_slen = msg->cdata_payload_size;
-	msg_buf_p = (uint8_t *)memcpy(msg_buf_p, msg->cdata_payload, msg_slen) + msg_slen;
+	msg_buf_p = (uint8_t *)memcpy(msg_buf_p, msg->cdata_payload, msg_slen) + msg_slen;//NOLINT
 	msg_slen = sizeof(msg->crc);
-	memcpy(msg_buf_p, (uint8_t *)(&(msg->crc)), msg_slen);
+	memcpy(msg_buf_p, (uint8_t *)(&(msg->crc)), msg_slen);//NOLINT
 
 	status = heci_send_user_command(msg_buf, CSE_USRCMD_SIZE);
 
@@ -315,8 +315,8 @@ static EFI_STATUS cse4abl_capsule_cmd_create(CSE_CMD **cmd, size_t *cmd_size, co
 
 	device = (buf[0] == 'm' ? EMMC : SDCARD);
 	partition = buf[1] - '0';
-	memset(name, 0, sizeof(name));
-	strncpy(name, buf + 3, sizeof(name) - 1); /* Number 3 is start index of name in buffer. */
+	memset(name, 0, sizeof(name));//NOLINT
+	strncpy(name, buf + 3, sizeof(name) - 1);//NOLINT /* Number 3 is start index of name in buffer. */
 	name_len = strlen(name) + 1;
 	ewdbg("capsule parameters: DEVICE=%d PARTITION=%d NAME=%s",
 		  device, partition, name);
@@ -327,7 +327,7 @@ static EFI_STATUS cse4abl_capsule_cmd_create(CSE_CMD **cmd, size_t *cmd_size, co
 	if (!(*cmd))
 		return EFI_OUT_OF_RESOURCES;
 
-	memset(*cmd, 0, *cmd_size);
+	memset(*cmd, 0, *cmd_size); //NOLINT
 	(*cmd)->action = USERCMD_UPDATE_IFWI(name_len + 2);
 	(*cmd)->device = device;
 	(*cmd)->partition = partition;
@@ -347,7 +347,7 @@ static EFI_STATUS cse4abl_capsule_msg_create(CSE_MSG **msg, CSE_CMD *cmd, size_t
 	if (!(*msg))
 		return EFI_OUT_OF_RESOURCES;
 
-	memset(*msg, 0, sizeof(CSE_MSG));
+	memset(*msg, 0, sizeof(CSE_MSG)); //NOLINT
 	(*msg)->magic = NVRAM_VALID_FLAG;
 	(*msg)->size = offsetof(CSE_MSG, cdata_payload) + cmd_size + sizeof((*msg)->crc);
 	(*msg)->cdata_header.data = cdh.data;

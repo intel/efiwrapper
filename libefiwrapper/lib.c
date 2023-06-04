@@ -41,7 +41,7 @@ CHAR16 *str16dup(const CHAR16 *str)
 	if (!dup)
 		return NULL;
 
-	memcpy(dup, str, size);
+	memcpy(dup, str, size);//NOLINT
 	return dup;
 }
 

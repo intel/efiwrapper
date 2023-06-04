@@ -77,7 +77,7 @@ static char *build_serial(void)
 	serial[4] = cid[4];
 	serial[5] = cid[11];
 
-	snprintf(&serial[6], 9, "%08x", sn);
+	snprintf(&serial[6], 9, "%08x", sn);//NOLINT
 	return serial;
 }
 

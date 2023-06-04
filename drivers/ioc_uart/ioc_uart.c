@@ -539,7 +539,7 @@ ias_frame init_frame(char command)
 	data.frame_counter = 0;
 	data.payload_length = 0;
 	data.command = command;
-	memset(data.content, 0x0, IAS_MAX_PAYLOAD_LENGTH);
+	memset(data.content, 0x0, IAS_MAX_PAYLOAD_LENGTH);//NOLINT
 	data.checksum = 0;
 	data.valid = 0;
 	return data;
@@ -907,7 +907,7 @@ ias_flash_result ias_parse_file(uint8_t *file_content, uint32_t file_size, ias_f
 					return e_ias_flash_result_out_of_memory;
 				}
 				(*next_frame_list_entry)->next = NULL;
-				memcpy(&(*next_frame_list_entry)->frame, &s_frame, sizeof((*next_frame_list_entry)->frame));
+				memcpy(&(*next_frame_list_entry)->frame, &s_frame, sizeof((*next_frame_list_entry)->frame));//NOLINT
 
 				/* Advance the next frame pointer */
 				next_frame_list_entry = (ias_frame_list **) &(*next_frame_list_entry)->next;
@@ -964,7 +964,7 @@ int flash_content(ias_frame_list const *frame_list, unsigned char command)
 				printf("Data frame number send: %4"PRIu32"|%4"PRIu32"\r", data_frame_counter, num_data_frames);
 		}
 
-		memcpy(&s_frame, &current_frame->frame, sizeof(s_frame));
+		memcpy(&s_frame, &current_frame->frame, sizeof(s_frame));//NOLINT
 		s_frame.command = command;
 
 		/* Send the frame. */

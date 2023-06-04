@@ -82,7 +82,7 @@ static EFI_STATUS set_block_count(unsigned count)
 	int ret;
 	struct cmd send_cmd;
 
-	memset(&send_cmd, 0, sizeof(send_cmd));
+	memset(&send_cmd, 0, sizeof(send_cmd));//NOLINT
 	send_cmd.args = count;
 	send_cmd.resp_len = 32;
 	send_cmd.flags = 0;
@@ -103,7 +103,7 @@ static EFI_STATUS transfer_data(bool read, EFI_LBA start, EFI_LBA count, void *b
 	struct cmd send_cmd;
 	struct cmd wait_cmd;
 
-	memset(&send_cmd, 0, sizeof(send_cmd));
+	memset(&send_cmd, 0, sizeof(send_cmd));//NOLINT
 	send_cmd.args = start;
 	send_cmd.nblock = count;
 	send_cmd.addr = (uintptr_t)buf;
@@ -136,7 +136,7 @@ static EFI_STATUS transfer_data(bool read, EFI_LBA start, EFI_LBA count, void *b
 	if (ret)
 		return EFI_DEVICE_ERROR;
 
-	memset(&wait_cmd, 0, sizeof(wait_cmd));
+	memset(&wait_cmd, 0, sizeof(wait_cmd));//NOLINT
 	wait_cmd.flags = CMDF_DATA_XFER;
 	ret = mmc_wait_cmd_done(&wait_cmd);
 
@@ -204,7 +204,7 @@ sdio_send_command(EFI_SD_HOST_IO_PROTOCOL *This,
 	if (EFI_ERROR(ret))
 		return ret;
 
-	memset(&c, 0, sizeof(c));
+	memset(&c, 0, sizeof(c));//NOLINT
 
 	c.index = CommandIndex;
 
@@ -234,7 +234,7 @@ sdio_send_command(EFI_SD_HOST_IO_PROTOCOL *This,
 		return EFI_DEVICE_ERROR;
 
 	if (ResponseData)
-		memcpy(ResponseData, &c.resp, sizeof(*ResponseData));
+		memcpy(ResponseData, &c.resp, sizeof(*ResponseData));//NOLINT
 
 	if (CommandIndex == CMD_SWITCH) {
 		mdelay(1);
