@@ -17,12 +17,6 @@
 #ifndef _UEFI_NVM_EXPRESS_PASS_THRU_H_
 #define _UEFI_NVM_EXPRESS_PASS_THRU_H_
 
-typedef struct {
-	UINT8 Type;
-	UINT8 SubType;
-	UINT8 Length[2];
-} EFI_DEVICE_PATH_PROTOCOL;
-
 
 #define EFI_NVM_EXPRESS_PASS_THRU_PROTOCOL_GUID \
   { \

@@ -85,5 +85,5 @@ EFI_STATUS identify_boot_media();
 
 boot_dev_t* get_boot_media();
 UINT8 get_boot_media_device_path_type(void);
-
+uint32_t get_diskbus();
 #endif	/* _STORAGE_H_ */

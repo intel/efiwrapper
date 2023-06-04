@@ -39,7 +39,7 @@
 
 #define AML_EXT_REGION_OP 0x80
 
-#define MAX_XSDT_HEADER_ENTRIES 20 // MUST <= the value in ABL/SBL
+#define MAX_XSDT_HEADER_ENTRIES 60 // MUST <= the value in ABL/SBL
 
 static const char RSDP_MAGIC[8] = "RSD PTR ";
 

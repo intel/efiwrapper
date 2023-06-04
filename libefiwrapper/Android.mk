@@ -31,7 +31,10 @@ LOCAL_STATIC_LIBRARIES := \
 	libefi
 LOCAL_SRC_FILES := $(LIBEFIWRAPPER_SRC_FILES)
 LOCAL_CFLAGS := $(EFIWRAPPER_CFLAGS)
-LOCAL_C_INCLUDES := $(LOCAL_PATH)/../include/libefiwrapper
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/../include/libefiwrapper \
+	$(LOCAL_PATH)/../../external/gnu-efi/gnu-efi-3.0/inc \
+	$(LOCAL_PATH)/../../external/gnu-efi/gnu-efi-3.0/inc/$(TARGET_EFI_ARCH_NAME) \
+	$(LOCAL_PATH)/../../external/gnu-efi/gnu-efi-3.0/inc/protocol
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/../include/libefiwrapper
 include $(BUILD_IAFW_STATIC_LIBRARY)
 

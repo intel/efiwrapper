@@ -32,6 +32,7 @@
 #include "diskio.h"
 #include "interface.h"
 #include "lib.h"
+#include "efiprot.h"
 
 typedef struct diskio {
 	EFI_DISK_IO interface;
@@ -57,7 +58,7 @@ static EFI_STATUS read_block(media_t *media, EFI_LBA lba,
 }
 
 static EFIAPI EFI_STATUS
-diskio_read(struct _EFI_DISK_IO *This,
+diskio_read(_EFI_DISK_IO *This,
 	    UINT32 MediaId,
 	    UINT64 Offset,
 	    UINTN BufferSize,
@@ -120,7 +121,7 @@ diskio_read(struct _EFI_DISK_IO *This,
 }
 
 static EFIAPI EFI_STATUS
-diskio_write(struct _EFI_DISK_IO *This,
+diskio_write(_EFI_DISK_IO *This,
 	     UINT32 MediaId,
 	     UINT64 Offset,
 	     UINTN BufferSize,

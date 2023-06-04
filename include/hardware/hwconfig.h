@@ -39,7 +39,9 @@
 #elif defined(PLATFORM_TIGERLAKE)
 
     #include "hw_tigerlake.h"
+#elif defined(PLATFORM_CELADON)
 
+    #include "hw_alderlake.h"
 #elif defined(PLATFORM_KABYLAKE)
 
     #include "hw_kabylake.h"

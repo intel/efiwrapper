@@ -32,6 +32,7 @@
 #include "external.h"
 #include "interface.h"
 #include "serialio.h"
+#include "efiser.h"
 
 static EFIAPI EFI_STATUS
 serialio_reset(__attribute__((__unused__)) SERIAL_IO_INTERFACE *This)
@@ -55,7 +56,7 @@ serialio_write(__attribute__((__unused__)) SERIAL_IO_INTERFACE *This,
 }
 
 static EFIAPI EFI_STATUS
-serialio_set_attributes(__attribute__((__unused__)) struct _SERIAL_IO_INTERFACE *This,
+serialio_set_attributes(__attribute__((__unused__)) _SERIAL_IO_INTERFACE *This,
 			__attribute__((__unused__)) UINT64 BaudRate,
 			__attribute__((__unused__)) UINT32 ReceiveFifoDepth,
 			__attribute__((__unused__)) UINT32 Timeout,
@@ -67,14 +68,14 @@ serialio_set_attributes(__attribute__((__unused__)) struct _SERIAL_IO_INTERFACE 
 }
 
 static EFIAPI EFI_STATUS
-serialio_set_control(__attribute__((__unused__)) struct _SERIAL_IO_INTERFACE *This,
+serialio_set_control(__attribute__((__unused__)) _SERIAL_IO_INTERFACE *This,
 		     __attribute__((__unused__)) UINT32 Control)
 {
 	return EFI_UNSUPPORTED;
 }
 
 static EFIAPI EFI_STATUS
-serialio_get_control(__attribute__((__unused__)) struct _SERIAL_IO_INTERFACE *This,
+serialio_get_control(__attribute__((__unused__)) _SERIAL_IO_INTERFACE *This,
 		     __attribute__((__unused__)) UINT32 *Control)
 {
 	return EFI_UNSUPPORTED;
