@@ -141,7 +141,7 @@ UsbdSetEpInfo (
 	EFI_USB_ENDPOINT_COMPANION_DESCRIPTOR    *EpCompDesc = NULL;
 
 	/* start by clearing all data in the destination */
-	memset (EpDest, 0, sizeof(USB_EP_INFO));
+	memset (EpDest, 0, sizeof(USB_EP_INFO));//NOLINT
 	EpDesc = EpSrc->EndpointDesc;
 	EpCompDesc = EpSrc->EndpointCompDesc;
 
@@ -255,7 +255,7 @@ UsbdGetConfigDesc (
 	        ConfigLen = ConfigObj->ConfigDesc->TotalLength;
 	        /* copy the data to the output buffer */
 	        Length = MIN (ReqLen, ConfigLen);
-	        memcpy (Buffer, Descriptor, Length);
+	        memcpy (Buffer, Descriptor, Length);//NOLINT
 	        *DataLen = Length;
 	        Status = EFI_SUCCESS;
 	} else {
@@ -293,7 +293,7 @@ UsbdGetStringDesc (
 	if (DescIndex == 0) {
 	        StringDesc = (mDrvObj.UsbdDevObj->StringTable);
 	        Length = MIN (ReqLen, StringDesc->Length);
-	        memcpy (Buffer, StringDesc, Length);
+	        memcpy (Buffer, StringDesc, Length);//NOLINT
 	        *DataLen = Length;
 	        Status = EFI_SUCCESS;
 	} else {
@@ -331,7 +331,7 @@ UsbdGetStringDesc (
 	                        Length = MIN (ReqLen, StringDesc->Length);
 	                        DEBUG ((DEBUG_INFO, "ReqLen=%x, StringLength=%x, Length=%x\n", ReqLen, StringDesc->Length, Length));
 
-	                        memcpy (Buffer, StringDesc, Length);
+	                        memcpy (Buffer, StringDesc, Length);//NOLINT
 	                        *DataLen = Length;
 	                        Status = EFI_SUCCESS;
 	                } else {
@@ -563,7 +563,7 @@ UsbdSetupHdlr (
 	                                DevDesc = mDrvObj.UsbdDevObj->DeviceDesc;
 	                                /* copy the data to the output buffer */
 	                                mCtrlIoReq.IoInfo.Length = MIN (CtrlRequest->Length, DevDesc->Length);
-	                                memcpy (mCtrlIoReq.IoInfo.Buffer, DevDesc, mCtrlIoReq.IoInfo.Length);
+	                                memcpy (mCtrlIoReq.IoInfo.Buffer, DevDesc, mCtrlIoReq.IoInfo.Length);//NOLINT
 	                                PrintDeviceDescriptor (DevDesc);
 	                                break;
 
@@ -698,7 +698,7 @@ UsbdSetupEvtHndlr (
 	DEBUG ((DEBUG_INFO, "UsbdSetupEvtHndlr\n"));
 
 	/* Fill out request object from the incomming buffer */
-	memcpy (&Req, Param->buffer, sizeof(EFI_USB_DEVICE_REQUEST));
+	memcpy (&Req, Param->buffer, sizeof(EFI_USB_DEVICE_REQUEST));//NOLINT
 
 	Status = UsbdSetupHdlr (&Req);
 	if (EFI_ERROR (Status)) {

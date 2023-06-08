@@ -49,7 +49,7 @@ ewvar_t *ewvar_new(CHAR16 *name, EFI_GUID *guid, UINT32 attr,
 	if (!var->name)
 		goto err;
 
-	memcpy(&var->guid, guid, sizeof(var->guid));
+	memcpy(&var->guid, guid, sizeof(var->guid));//NOLINT
 	var->attributes = attr;
 	var->size = size;
 
@@ -57,7 +57,7 @@ ewvar_t *ewvar_new(CHAR16 *name, EFI_GUID *guid, UINT32 attr,
 	if (!var->data)
 		goto err;
 
-	memcpy(var->data, data, size);
+	memcpy(var->data, data, size);//NOLINT
 
 	if (attr & EFI_VARIABLE_NON_VOLATILE &&
 	    storage && storage->save) {
@@ -149,7 +149,7 @@ EFI_STATUS ewvar_update(ewvar_t *var, UINTN size, VOID *data)
 		if (!var->data)
 			return EFI_OUT_OF_RESOURCES;
 
-		memcpy((char *)var->data + var->size, data, size);
+		memcpy((char *)var->data + var->size, data, size);//NOLINT
 		var->size += size;
 	} else {
 		var->data = realloc(var->data, size);
@@ -159,7 +159,7 @@ EFI_STATUS ewvar_update(ewvar_t *var, UINTN size, VOID *data)
 		var->size = size;
 		if (!var->data)
 			return EFI_OUT_OF_RESOURCES;
-		memcpy(var->data, data, size);
+		memcpy(var->data, data, size);//NOLINT
 	}
 
 	if (var->attributes & EFI_VARIABLE_NON_VOLATILE &&

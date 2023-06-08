@@ -71,7 +71,7 @@ static int sdhci_abort_tuning(struct sdhci *host)
 	sdhci_write32(host, SDHCI_INT_ENABLE, SDHCI_INT_DATA_AVAIL);
 	sdhci_write32(host, SDHCI_SIGNAL_ENABLE, SDHCI_INT_DATA_AVAIL);
 
-	memset(&tuning_cmd, 0, sizeof(tuning_cmd));
+	memset(&tuning_cmd, 0, sizeof(tuning_cmd));//NOLINT
 	tuning_cmd.index = CMD_MMC_STOP_TRANSMISSION;
 	tuning_cmd.flags = MMC_RESPONSE_SPI_R1B | MMC_RESPONSE_R1B | MMC_COMMAND_AC;
 	tuning_cmd.flags |= CMDF_DATA_XFER | CMDF_USE_DMA;
@@ -81,7 +81,7 @@ static int sdhci_abort_tuning(struct sdhci *host)
 	if (ret)
 		return EFI_DEVICE_ERROR;
 
-	memset(&wait_cmd, 0, sizeof(wait_cmd));
+	memset(&wait_cmd, 0, sizeof(wait_cmd));//NOLINT
 	wait_cmd.flags = CMDF_DATA_XFER;
 	ret = mmc_wait_cmd_done(&wait_cmd);
 

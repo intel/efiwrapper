@@ -65,8 +65,8 @@ static EFI_GUID dp_guid = DEVICE_PATH_PROTOCOL;
 #define ABL_BDEVLIST "ABL.bootdevices"
 
 static boot_dev_t boot_dev = {
-	.type = STORAGE_EMMC,
-	.diskbus = 0
+	.type = STORAGE_NVME,
+	.diskbus = 0x000
 };
 
 /* Device path  */
@@ -157,6 +157,7 @@ EFI_STATUS storage_init(EFI_SYSTEM_TABLE *st, storage_t *storage,
 	size_t i, j;
 	media_t *media;
 
+	ewdbg("storage_init called");
 	if (!st || !storage || !handle)
 		return EFI_INVALID_PARAMETER;
 
@@ -242,7 +243,6 @@ EFI_STATUS identify_flash_media(boot_dev_t* pdev)
 	OS_BOOT_DEVICE_LIST* plist;
 	SBL_OS_BOOT_MEDIUM_TYPE type;
 
-	ewdbg("identify_flash_media");
 	val = ewarg_getval(ABL_BDEVLIST);
 	if (!val) {
 		ewdbg("No devlist, select default");
@@ -285,10 +285,11 @@ EFI_STATUS identify_boot_media()
 	const char *val;
 	size_t len;
 
-	val = ewarg_getval(ABL_BDEV);
+	val = ewarg_getval("bdev");
 	if (!val)
 		return EFI_SUCCESS;
 
+	ewdbg("bdev = %s", val);
 	len = strlen(val);
 	if (!strncmp(val, "MMC", len))
 		boot_dev.type = STORAGE_EMMC;
@@ -305,10 +306,11 @@ EFI_STATUS identify_boot_media()
 	if (boot_dev.diskbus != 0)
 		return EFI_SUCCESS;
 
-	val = ewarg_getval(ABL_DISKBUS);
+	val = ewarg_getval("diskbus");
 	if (!val)
 		return EFI_SUCCESS;
 
+	ewdbg("diskbus = %s", val);
 	boot_dev.diskbus = (UINT32)strtoull(val, NULL, 16);
 
 	return EFI_SUCCESS;
@@ -317,6 +319,11 @@ EFI_STATUS identify_boot_media()
 boot_dev_t* get_boot_media()
 {
 	return &boot_dev;
+}
+
+uint32_t get_diskbus()
+{
+	return boot_dev.diskbus;
 }
 
 UINT8 get_boot_media_device_path_type(void)
@@ -341,4 +348,3 @@ UINT8 get_boot_media_device_path_type(void)
 
 	return MSG_EMMC_DP;
 }
-

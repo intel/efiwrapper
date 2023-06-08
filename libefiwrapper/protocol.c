@@ -76,7 +76,7 @@ install_protocol_interface(EFI_HANDLE *Handle,
 				inte->handle = inte;
 				*Handle = inte->handle;
 			}
-			memcpy(&inte->protocol, Protocol, sizeof(*Protocol));
+			memcpy(&inte->protocol, Protocol, sizeof(*Protocol));//NOLINT
 			inte->interface = Interface;
 			inte->installed = TRUE;
 

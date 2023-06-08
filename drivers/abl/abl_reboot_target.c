@@ -156,8 +156,8 @@ static EFI_STATUS set_reboot_target(const CHAR16 *name)
 	cdh.length = 2; /* 2*32 bits, from header to padding */
 	cdh.tag = CDATA_TAG_USER_CMD;
 
-	memset(&reboot_cmd, 0, sizeof(reboot_cmd));
-	memset(&msg, 0, sizeof(msg));
+	memset(&reboot_cmd, 0, sizeof(reboot_cmd)); //NOLINT
+	memset(&msg, 0, sizeof(msg)); //NOLINT
 	msg.magic = NVRAM_VALID_FLAG;
 	msg.cdata_header.data = cdh.data;
 	reboot_cmd.action = USERCMD_ACTION;

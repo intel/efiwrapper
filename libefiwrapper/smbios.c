@@ -157,8 +157,8 @@ static EFI_STATUS set_field(char *field, const char *value)
 	if (len > MAX_SMBIOS_FIELD - 1)
 		return EFI_BUFFER_TOO_SMALL;
 
-	memcpy(field, value, len + 1);
-	memset(field + len + 1, ' ', MAX_SMBIOS_FIELD - len - 1);
+	memcpy(field, value, len + 1);//NOLINT
+	memset(field + len + 1, ' ', MAX_SMBIOS_FIELD - len - 1);//NOLINT
 
 	return EFI_SUCCESS;
 }

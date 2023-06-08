@@ -53,7 +53,7 @@ rs_get_variable(CHAR16 *VariableName, EFI_GUID *VendorGuid, UINT32 *Attributes,
 
 	*Attributes = var->attributes;
 	*DataSize = var->size;
-	memcpy(Data, var->data, var->size);
+	memcpy(Data, var->data, var->size);//NOLINT
 
 	return EFI_SUCCESS;
 }
@@ -85,8 +85,8 @@ rs_get_next_variable_name(UINTN *VariableNameSize,
 		return EFI_BUFFER_TOO_SMALL;
 	}
 
-	memcpy(VariableName, var->name, name_size);
-	memcpy(VendorGuid, &var->guid, sizeof(var->guid));
+	memcpy(VariableName, var->name, name_size);//NOLINT
+	memcpy(VendorGuid, &var->guid, sizeof(var->guid));//NOLINT
 
 	return EFI_SUCCESS;
 }
@@ -248,7 +248,7 @@ EFI_STATUS rs_init(EFI_SYSTEM_TABLE *st)
 		return EFI_INVALID_PARAMETER;
 
 	rs = st->RuntimeServices;
-	memcpy(rs, &runtime_services_default, sizeof(*rs));
+	memcpy(rs, &runtime_services_default, sizeof(*rs));//NOLINT
 
 	return crc32((void *)rs, sizeof(*rs), &rs->Hdr.CRC32);
 }

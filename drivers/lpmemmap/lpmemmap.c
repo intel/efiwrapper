@@ -163,9 +163,7 @@ static EFI_STATUS insert_mem_descr_at(EFI_PHYSICAL_ADDRESS start, EFI_PHYSICAL_A
 	if (!efimemmap)
 		return EFI_OUT_OF_RESOURCES;
 
-	memmove(&efimemmap[pos + 1],
-		&efimemmap[pos],
-		(efimemmap_nb - pos - 1) * sizeof(*efimemmap));
+	memmove(&efimemmap[pos + 1], &efimemmap[pos], (efimemmap_nb - pos - 1) * sizeof(*efimemmap));//NOLINT
 	set_mem_descr(&efimemmap[pos], start, end, type);
 
 	return EFI_SUCCESS;
@@ -244,7 +242,7 @@ get_memory_map(UINTN *MemoryMapSize, EFI_MEMORY_DESCRIPTOR *MemoryMap,
 		return ret;
 
 	*MemoryMapSize = size;
-	memcpy(MemoryMap, efimemmap, size);
+	memcpy(MemoryMap, efimemmap, size);//NOLINT
 	*MapKey = key;
 	*DescriptorSize = sizeof(*efimemmap);
 	*DescriptorVersion = EFI_MEMORY_DESCRIPTOR_VERSION;

@@ -46,7 +46,7 @@ EFI_STATUS interface_init(EFI_SYSTEM_TABLE *st, EFI_GUID *guid,
 	if (!*interface)
 		return EFI_OUT_OF_RESOURCES;
 
-	memcpy(*interface, base, base_size);
+	memcpy(*interface, base, base_size);//NOLINT
 
 	ret = uefi_call_wrapper(st->BootServices->InstallProtocolInterface, 4,
 				handle, guid, EFI_NATIVE_INTERFACE, *interface);

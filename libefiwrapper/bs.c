@@ -309,7 +309,7 @@ bs_copy_mem(VOID *Destination,
 	    VOID *Source,
 	    UINTN Length)
 {
-	memcpy(Destination, Source, Length);
+	memcpy(Destination, Source, Length); //NOLINT
 }
 
 static EFIAPI VOID
@@ -317,7 +317,7 @@ bs_set_mem(VOID *Buffer,
 	   UINTN Size,
 	   UINT8 Value)
 {
-	memset(Buffer, Value, Size);
+	memset(Buffer, Value, Size); //NOLINT
 }
 
 static EFIAPI EFI_STATUS
@@ -382,7 +382,7 @@ EFI_STATUS bs_init(EFI_SYSTEM_TABLE *st)
 		return EFI_INVALID_PARAMETER;
 
 	bs = st->BootServices;
-	memcpy(bs, &boot_services_default, sizeof(*bs));
+	memcpy(bs, &boot_services_default, sizeof(*bs)); //NOLINT
 
 	ret = protocol_init_bs(bs);
 	if (EFI_ERROR(ret))

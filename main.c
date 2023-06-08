@@ -36,7 +36,7 @@
 #include <ewvar.h>
 #include <ewdrv.h>
 #include <ewlog.h>
-
+#include <storage.h>
 /* Entry point */
 int main(int argc, char **argv)
 {

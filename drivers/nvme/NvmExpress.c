@@ -253,6 +253,129 @@ DiscoverAllNamespaces (
   return EFI_SUCCESS;
 }
 
+VOID
+EFIAPI
+MemoryFence (
+  VOID
+  )
+{
+  // This is a little bit of overkill and it is more about the compiler that it is
+  // actually processor synchronization. This is like the _ReadWriteBarrier
+  // Microsoft specific intrinsic
+  __asm__ __volatile__ ("":::"memory");
+}
+
+#define PCI_BASE_ADDRESSREG_OFFSET     0x10
+#define PCI_COMMAND_OFFSET             0x04
+#define PCI_DEVICE_ID_OFFSET           0x02
+
+typedef enum {
+  FilterWidth8,
+  FilterWidth16,
+  FilterWidth32,
+  FilterWidth64
+} FILTER_IO_WIDTH;
+
+BOOLEAN
+EFIAPI
+FilterBeforeMmIoRead (
+  VOID
+  )
+{
+  return TRUE;
+}
+
+VOID
+EFIAPI
+FilterAfterMmIoRead (
+  VOID
+  )
+{
+  return;
+}
+
+BOOLEAN
+EFIAPI
+FilterBeforeMmIoWrite (
+  VOID
+  )
+{
+  return TRUE;
+}
+
+VOID
+EFIAPI
+FilterAfterMmIoWrite (
+  VOID
+  )
+{
+  return;
+}
+
+UINT16
+EFIAPI
+MmioWrite16 (
+  IN      UINTN                     Address,
+  IN      UINT16                    Value
+  )
+{
+  BOOLEAN                           Flag;
+
+  ASSERT ((Address & 1) == 0);
+
+  Flag = FilterBeforeMmIoWrite ();
+  if (Flag) {
+    MemoryFence ();
+    *(volatile UINT16*)Address = Value;
+    MemoryFence ();
+  }
+  FilterAfterMmIoWrite ();
+
+  return Value;
+}
+
+UINT16
+EFIAPI
+MmioRead16 (
+  IN      UINTN                     Address
+  )
+{
+  UINT16         Value=0;
+  BOOLEAN        Flag;
+
+  ASSERT ((Address & 1) == 0);
+  Flag = FilterBeforeMmIoRead ();
+  if (Flag) {
+    MemoryFence ();
+    Value = *(volatile UINT16*)Address;
+    MemoryFence ();
+  }
+  FilterAfterMmIoRead ();
+
+  return Value;
+}
+
+#define EFI_PCI_COMMAND_IO_SPACE                        0x0001
+#define EFI_PCI_COMMAND_MEMORY_SPACE                    0x0002
+#define EFI_PCI_COMMAND_BUS_MASTER                      0x0004
+#define EFI_PCI_COMMAND_SPECIAL_CYCLE                   0x0008
+#define EFI_PCI_COMMAND_MEMORY_WRITE_AND_INVALIDATE     0x0010
+#define EFI_PCI_COMMAND_VGA_PALETTE_SNOOP               0x0020
+#define EFI_PCI_COMMAND_PARITY_ERROR_RESPOND            0x0040
+#define EFI_PCI_COMMAND_STEPPING_CONTROL                0x0080
+#define EFI_PCI_COMMAND_SERR                            0x0100
+#define EFI_PCI_COMMAND_FAST_BACK_TO_BACK               0x0200
+
+UINT16
+ EFIAPI
+ MmioOr16 (
+   IN      UINTN                     Address,
+   IN      UINT16                    OrData
+   )
+ {
+   return MmioWrite16 (Address, (UINT16) (MmioRead16 (Address) | OrData));
+ }
+
 /**
   Starts a device controller or a bus controller.
 
@@ -285,6 +408,9 @@ NvmeInitialize (
   NVME_CONTROLLER_PRIVATE_DATA        *Private;
 
   DEBUG_NVME ((EFI_D_INFO, "NvmeInitialize:\n"));
+
+  pci_write_config32(NvmeHcPciBase,PCI_COMMAND_OFFSET, \
+    (UINT32)(EFI_PCI_COMMAND_IO_SPACE | EFI_PCI_COMMAND_MEMORY_SPACE | EFI_PCI_COMMAND_BUS_MASTER));
 
   Private          = NULL;
 

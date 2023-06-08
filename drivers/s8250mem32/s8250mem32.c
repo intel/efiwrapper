@@ -40,6 +40,7 @@
 #include <pci/pci.h>
 #define SERIAL_BASEADDR       GetPciUartBase(SERIAL_PCI_DID)
 #define INTEL_VID             0x8086
+#define MOS_VID               0x9710
 static uint32_t GetPciUartBase(uint32_t pci_did)
 {
 	uint32_t addr;

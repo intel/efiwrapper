@@ -67,7 +67,7 @@ EFI_STATUS conf_table_new(EFI_SYSTEM_TABLE *st,
 success:
 	st->ConfigurationTable = tables;
 	*table = &tables[st->NumberOfTableEntries];
-	memcpy(&(*table)->VendorGuid, guid, sizeof(*guid));
+	memcpy(&(*table)->VendorGuid, guid, sizeof(*guid));//NOLINT
 	st->NumberOfTableEntries++;
 
 	return EFI_SUCCESS;
@@ -97,11 +97,8 @@ EFI_STATUS conf_table_free(EFI_SYSTEM_TABLE *st, EFI_GUID *guid)
 		if (!tables)
 			return EFI_OUT_OF_RESOURCES;
 
-		memcpy(tables, st->ConfigurationTable, i *
-		       sizeof(EFI_CONFIGURATION_TABLE));
-		memcpy(&tables[i], &st->ConfigurationTable[i + 1],
-		       (st->NumberOfTableEntries - i) *
-		       sizeof(EFI_CONFIGURATION_TABLE));
+		memcpy(tables, st->ConfigurationTable, i * sizeof(EFI_CONFIGURATION_TABLE));//NOLINT
+		memcpy(&tables[i], &st->ConfigurationTable[i + 1], (st->NumberOfTableEntries - i) * sizeof(EFI_CONFIGURATION_TABLE));//NOLINT
 		break;
 	}
 

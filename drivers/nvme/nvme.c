@@ -31,14 +31,15 @@
 #include "NvmExpress.h"
 #include "NvmCtrlLib.h"
 
-
 #define DEVICE_INDEX_DEFAULT  0
+#define MAX_PCI_BUS_NUM 8
 
 static struct supported_device {
 	u16 vid;
 	u16 did;
 } SUPPORTED_DEVICES[] = {
-	{ .vid = 0x8086, .did = NVME_PCI_DID },
+	{ .vid = 0x144d, .did = NVME_PCI_DID },
+	{ .vid = 0x8086, .did = 0xF1A6 },
 };
 
 static EFI_STATUS _init(storage_t *s)
@@ -46,13 +47,20 @@ static EFI_STATUS _init(storage_t *s)
 	DEVICE_BLOCK_INFO	  BlockInfo;
 	EFI_STATUS ret;
 	pcidev_t pci_dev = 0;
-	size_t i;
+	size_t i,j;
 
-	for (i = 0; i < ARRAY_SIZE(SUPPORTED_DEVICES); i++)
-		if (pci_find_device(SUPPORTED_DEVICES[i].vid,
-				SUPPORTED_DEVICES[i].did,
-				&pci_dev))
-			break;
+	pci_dev = get_diskbus();
+	DEBUG_NVME ((EFI_D_INFO, "pci dev = 0x%X\n", pci_dev));
+	if (pci_dev == 0){
+		for (i = 0; i < ARRAY_SIZE(SUPPORTED_DEVICES); i++)
+			for (j = 0; j< MAX_PCI_BUS_NUM; j++)
+				if (pci_find_device_by_bus(j,SUPPORTED_DEVICES[i].vid,
+							SUPPORTED_DEVICES[i].did,
+							&pci_dev))
+					break;
+	}
+
+	pci_dev = 0x80000000 | pci_dev;
 
 	DEBUG_NVME ((EFI_D_INFO, "pci_dev = 0x%X\n", pci_dev));
 	if (!pci_dev)
@@ -78,7 +86,6 @@ static EFI_STATUS _init(storage_t *s)
 
 	return EFI_SUCCESS;
 }
-
 
 static EFI_LBA _read(storage_t *s, EFI_LBA start, EFI_LBA count, void *buf)
 {
@@ -135,6 +142,7 @@ static EFI_STATUS nvme_drv_init(EFI_SYSTEM_TABLE *st)
 	boot_dev = get_boot_media();
 	if (!boot_dev)
 		return EFI_INVALID_PARAMETER;
+
 	if (boot_dev->type != STORAGE_NVME)
 		return EFI_SUCCESS;
 

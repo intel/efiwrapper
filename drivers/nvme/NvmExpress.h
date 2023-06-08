@@ -24,7 +24,11 @@
 #include "NvmInternal.h"
 #include "protocol/StorageSecurityCommand.h"
 
-#define nvme_dbg(a, ...) { printf(__VA_ARGS__); }
+#define EFI_D_VERBOSE "NVME Debug: "
+#define EFI_D_INFO    "NVME Info: "
+#define EFI_D_ERROR   "NVME Error: "
+
+#define nvme_dbg(a, ...) printf(a __VA_ARGS__)
 #define DEBUG_NVME(a) (nvme_dbg a)
 
 #define DEBUG_CODE_BEGIN() if (0) {

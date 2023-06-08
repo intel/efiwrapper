@@ -32,6 +32,7 @@
 #include "diskio.h"
 #include "interface.h"
 #include "lib.h"
+#include "efiprot.h"
 
 typedef struct diskio {
 	EFI_DISK_IO interface;
@@ -57,7 +58,7 @@ static EFI_STATUS read_block(media_t *media, EFI_LBA lba,
 }
 
 static EFIAPI EFI_STATUS
-diskio_read(struct _EFI_DISK_IO *This,
+diskio_read(_EFI_DISK_IO *This,
 	    UINT32 MediaId,
 	    UINT64 Offset,
 	    UINTN BufferSize,
@@ -90,7 +91,7 @@ diskio_read(struct _EFI_DISK_IO *This,
 			return ret;
 
 		size = min(blksz - (Offset % blksz), BufferSize);
-		memcpy(buf, block + (Offset % blksz), size);
+		memcpy(buf, block + (Offset % blksz), size);//NOLINT
 		free(block);
 
 		buf += size;
@@ -112,7 +113,7 @@ diskio_read(struct _EFI_DISK_IO *This,
 		ret = read_block(media, Offset / blksz, &block);
 		if (EFI_ERROR(ret))
 			return ret;
-		memcpy(buf, block, BufferSize);
+		memcpy(buf, block, BufferSize);//NOLINT
 		free(block);
 	}
 
@@ -120,7 +121,7 @@ diskio_read(struct _EFI_DISK_IO *This,
 }
 
 static EFIAPI EFI_STATUS
-diskio_write(struct _EFI_DISK_IO *This,
+diskio_write(_EFI_DISK_IO *This,
 	     UINT32 MediaId,
 	     UINT64 Offset,
 	     UINTN BufferSize,
@@ -153,7 +154,7 @@ diskio_write(struct _EFI_DISK_IO *This,
 			return ret;
 
 		size = min(blksz - (Offset % blksz), BufferSize);
-		memcpy(block + (Offset % blksz), buf, size);
+		memcpy(block + (Offset % blksz), buf, size);//NOLINT
 
 		count = media->storage->write(media->storage, Offset / blksz, 1, block);
 		free(block);
@@ -181,7 +182,7 @@ diskio_write(struct _EFI_DISK_IO *This,
 		if (EFI_ERROR(ret))
 			return ret;
 
-		memcpy(block, buf, BufferSize);
+		memcpy(block, buf, BufferSize);//NOLINT
 		count = media->storage->write(media->storage, Offset / blksz, 1, block);
 		free(block);
 		if (count != 1)
